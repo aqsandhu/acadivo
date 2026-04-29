@@ -1,100 +1,95 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_dropdown.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/stats_card.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/student_service.dart';
+import '../../services/api_service.dart';
+import '../../models/result_model.dart';
 
 class StudentMarksScreen extends ConsumerStatefulWidget {
   const StudentMarksScreen({super.key});
-
   @override
   ConsumerState<StudentMarksScreen> createState() => _StudentMarksScreenState();
 }
 
 class _StudentMarksScreenState extends ConsumerState<StudentMarksScreen> {
-  bool _isUrdu = false;
-  String? _selectedExam;
+  bool _isLoading = true;
+  String? _error;
+  List<ResultModel> _results = [];
 
-  final List<Map<String, dynamic>> _marks = [
-    {'subject': 'Mathematics', 'exam': 'Mid-Term 1', 'marks': 85, 'total': 100},
-    {'subject': 'Science', 'exam': 'Mid-Term 1', 'marks': 78, 'total': 100},
-    {'subject': 'English', 'exam': 'Mid-Term 1', 'marks': 92, 'total': 100},
-    {'subject': 'Urdu', 'exam': 'Mid-Term 1', 'marks': 88, 'total': 100},
-    {'subject': 'Mathematics', 'exam': 'Mid-Term 2', 'marks': 90, 'total': 100},
-    {'subject': 'Science', 'exam': 'Mid-Term 2', 'marks': 82, 'total': 100},
-    {'subject': 'English', 'exam': 'Mid-Term 2', 'marks': 88, 'total': 100},
-  ];
+  @override
+  void initState() { super.initState(); _loadData(); }
+
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = StudentService(api);
+      final data = await service.getMyResults();
+      setState(() { _results = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    final filtered = _selectedExam == null
-        ? _marks
-        : _marks.where((m) => m['exam'] == _selectedExam).toList();
-
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'میرے نمبر' : 'My Marks',
-        isUrdu: _isUrdu,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: CustomDropdown<String>(
-              label: _isUrdu ? 'امتحان' : 'Exam',
-              value: _selectedExam,
-              items: const [
-                DropdownMenuItem(value: null, child: Text('All')),
-                DropdownMenuItem(value: 'Mid-Term 1', child: Text('Mid-Term 1')),
-                DropdownMenuItem(value: 'Mid-Term 2', child: Text('Mid-Term 2')),
-                DropdownMenuItem(value: 'Final', child: Text('Final')),
-              ],
-              onChanged: (v) => setState(() => _selectedExam = v),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: MaterialStatePropertyAll(theme.colorScheme.primaryContainer.withOpacity(0.3)),
-                columns: [
-                  DataColumn(label: Text(_isUrdu ? 'مضمون' : 'Subject')),
-                  DataColumn(label: Text(_isUrdu ? 'امتحان' : 'Exam')),
-                  DataColumn(label: Text(_isUrdu ? 'نمبر' : 'Marks')),
-                  DataColumn(label: Text(_isUrdu ? 'فیصد' : '%')),
-                ],
-                rows: filtered.map((m) {
-                  final pct = (m['marks'] / m['total'] * 100).toStringAsFixed(1);
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(m['subject'])),
-                      DataCell(Text(m['exam'])),
-                      DataCell(Text('${m['marks']}/${m['total']}')),
-                      DataCell(Text('$pct%')),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-          Container(
-            height: 200,
-            padding: const EdgeInsets.all(16),
-            child: Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-              ),
-              child: Center(
-                child: Text(
-                  _isUrdu ? 'کارکردگی کا چارٹ یہاں نظر آئے گا' : 'Performance chart will appear here',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-              ),
-            ),
-          ),
-        ],
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'نمبرز' : 'Marks',
+          isUrdu: isUrdu,
+        ),
+        body: _isLoading && _results.isEmpty
+            ? const Center(child: LoadingWidget())
+            : _error != null && _results.isEmpty
+                ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                : _results.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.score_outlined,
+                        title: isUrdu ? 'کوئی نمبر نہیں' : 'No Marks',
+                        subtitle: isUrdu ? 'کوئی نتیجہ دستیاب نہیں' : 'No results available yet.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ListView.builder(
+                          itemCount: _results.length,
+                          padding: const EdgeInsets.all(16),
+                          itemBuilder: (context, index) {
+                            final r = _results[index];
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: theme.colorScheme.tertiaryContainer,
+                                  child: Text('${(r.totalMarksObtained ?? 0).toStringAsFixed(0)}', style: TextStyle(color: theme.colorScheme.tertiary, fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                                title: Text(r.examType ?? 'Exam', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                subtitle: Text('${r.grade ?? ""} • Percentage: ${r.percentage?.toStringAsFixed(1) ?? "N/A"}%'),
+                                trailing: Text(
+                                  '${(r.totalMarksObtained ?? 0).toStringAsFixed(0)}/${(r.totalMaxMarks ?? 0).toStringAsFixed(0)}',
+                                  style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
       ),
     );
   }

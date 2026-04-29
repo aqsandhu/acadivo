@@ -1,127 +1,111 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../widgets/loading_widget.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/admin_service.dart';
+import '../../services/api_service.dart';
+import '../../models/announcement_model.dart';
 
 class SchoolAnnouncementsScreen extends ConsumerStatefulWidget {
   const SchoolAnnouncementsScreen({super.key});
-
   @override
   ConsumerState<SchoolAnnouncementsScreen> createState() => _SchoolAnnouncementsScreenState();
 }
 
 class _SchoolAnnouncementsScreenState extends ConsumerState<SchoolAnnouncementsScreen> {
-  bool _isUrdu = false;
+  bool _isLoading = true;
+  String? _error;
+  List<AnnouncementModel> _announcements = [];
 
-  final List<Map<String, dynamic>> _announcements = [
-    {'title': 'Annual Sports Day', 'content': 'On March 25th', 'author': 'Principal', 'date': '15 Mar', 'pinned': true},
-    {'title': 'Fee Deadline Extended', 'content': 'Due date is now March 20th', 'author': 'Admin', 'date': '14 Mar', 'pinned': false},
-  ];
+  @override
+  void initState() { super.initState(); _loadData(); }
 
-  void _showCreateDialog() {
-    final titleController = TextEditingController();
-    final contentController = TextEditingController();
-    bool isPinned = false;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            left: 16, right: 16, top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _isUrdu ? 'اعلان بنائیں' : 'Create Announcement',
-                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(label: _isUrdu ? 'عنوان' : 'Title', controller: titleController),
-              const SizedBox(height: 12),
-              CustomTextField(
-                label: _isUrdu ? 'مواد' : 'Content',
-                controller: contentController,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 8),
-              CheckboxListTile(
-                title: Text(_isUrdu ? 'سب سے اوپر رکھیں' : 'Pin to top'),
-                value: isPinned,
-                onChanged: (v) => setState(() => isPinned = v!),
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-              const SizedBox(height: 16),
-              CustomButton(
-                label: _isUrdu ? 'شائع کریں' : 'Publish',
-                onPressed: () => Navigator.of(ctx).pop(),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = AdminService(api);
+      final data = await service.getAnnouncements();
+      setState(() { _announcements = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'نوٹس بورڈ' : 'Noticeboard',
-        isUrdu: _isUrdu,
-      ),
-      body: _announcements.isEmpty
-          ? EmptyStateWidget(
-              icon: Icons.campaign_outlined,
-              title: _isUrdu ? 'کوئی اعلانات نہیں' : 'No Announcements',
-              subtitle: '',
-              actionLabel: 'Create',
-              onAction: _showCreateDialog,
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _announcements.length,
-              itemBuilder: (context, index) {
-                final a = _announcements[index];
-                return Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: a['pinned']
-                          ? theme.colorScheme.primary.withOpacity(0.3)
-                          : theme.colorScheme.outlineVariant.withOpacity(0.5),
-                    ),
-                  ),
-                  child: ListTile(
-                    leading: a['pinned']
-                        ? Icon(Icons.push_pin, color: theme.colorScheme.primary)
-                        : const Icon(Icons.campaign_outlined),
-                    title: Text(a['title']),
-                    subtitle: Text('${a['author']} • ${a['date']}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: () {}),
-                        IconButton(icon: const Icon(Icons.delete, size: 20, color: Colors.red), onPressed: () {}),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreateDialog,
-        icon: const Icon(Icons.add),
-        label: Text(_isUrdu ? 'اعلان' : 'Announcement'),
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'اسکول کے اعلانات' : 'School Announcements',
+          isUrdu: isUrdu,
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {},
+          child: const Icon(Icons.add),
+        ),
+        body: _isLoading && _announcements.isEmpty
+            ? const Center(child: LoadingWidget())
+            : _error != null && _announcements.isEmpty
+                ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                : _announcements.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.campaign_outlined,
+                        title: isUrdu ? 'کوئی اعلان نہیں' : 'No Announcements',
+                        subtitle: isUrdu ? 'ابھی تک کوئی اعلان نہیں' : 'No announcements yet.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ListView.builder(
+                          itemCount: _announcements.length,
+                          padding: const EdgeInsets.all(16),
+                          itemBuilder: (context, index) {
+                            final a = _announcements[index];
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        if (a.isPinned)
+                                          StatusBadge(label: isUrdu ? 'پن شدہ' : 'Pinned', type: StatusType.info),
+                                        const Spacer(),
+                                        Text(
+                                          a.postedAt != null
+                                            ? '${a.postedAt!.day}/${a.postedAt!.month}/${a.postedAt!.year}'
+                                            : '',
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(a.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 4),
+                                    Text(a.content, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
       ),
     );
   }

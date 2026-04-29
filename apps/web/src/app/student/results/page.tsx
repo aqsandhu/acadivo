@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ResultCard } from "@/components/dashboard/ResultCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { ResultItem } from "@/types";
 import { Download } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";

@@ -4,8 +4,8 @@
 
 import { Request, Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
-import { ApiResponse } from "../../lib/ApiResponse";
-import { ApiError } from "../../lib/ApiError";
+import { ApiResponse } from "../../utils/ApiResponse";
+import { ApiError } from "../../utils/ApiError";
 import { asyncHandler } from "../../lib/asyncHandler";
 import * as TeacherService from "./teacher.service";
 

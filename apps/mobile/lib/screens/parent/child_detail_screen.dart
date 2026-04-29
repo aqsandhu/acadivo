@@ -1,242 +1,152 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/stats_card.dart';
+import '../../widgets/status_badge.dart';
 import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/parent_service.dart';
+import '../../services/api_service.dart';
+import '../../models/student_model.dart';
+import '../../models/attendance_model.dart';
+import '../../models/homework_model.dart';
+import '../../models/result_model.dart';
 
 class ChildDetailScreen extends ConsumerStatefulWidget {
-  final String childName;
-  const ChildDetailScreen({super.key, required this.childName});
-
+  final String childId;
+  const ChildDetailScreen({super.key, required this.childId});
   @override
   ConsumerState<ChildDetailScreen> createState() => _ChildDetailScreenState();
 }
 
 class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
-  bool _isUrdu = false;
+  bool _isLoading = true;
+  String? _error;
+  StudentModel? _child;
+  List<AttendanceModel> _attendance = [];
+  List<HomeworkModel> _homework = [];
+  List<ResultModel> _results = [];
+
+  @override
+  void initState() { super.initState(); _loadData(); }
+
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = ParentService(api);
+      final attendance = await service.getChildAttendance(widget.childId);
+      final homework = await service.getChildHomework(widget.childId);
+      final results = await service.getChildResults(widget.childId);
+      setState(() { _attendance = attendance; _homework = homework; _results = results; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return DefaultTabController(
-      length: 6,
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         appBar: CustomAppBar(
-          title: widget.childName,
-          isUrdu: _isUrdu,
+          title: isUrdu ? 'بچے کی تفصیل' : 'Child Details',
+          isUrdu: isUrdu,
         ),
-        body: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              color: theme.colorScheme.primaryContainer.withOpacity(0.3),
-              child: Row(
-                children: [
-                  UserAvatar(name: widget.childName, size: 72),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.childName,
-                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text('Class 8-A', style: theme.textTheme.bodyMedium),
-                        Text('Roll: 101', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                      ],
+        body: _isLoading
+            ? const Center(child: LoadingWidget())
+            : _error != null
+                ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                : RefreshIndicator(
+                    onRefresh: _loadData,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Card(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  UserAvatar(name: _child?.name ?? 'Child', size: 60),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(_child?.name ?? 'Unknown', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                                        const SizedBox(height: 4),
+                                        Text('${_child?.className ?? ""} • ${_child?.sectionName ?? ""}', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(isUrdu ? 'حالیہ حاضری' : 'Recent Attendance', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 12),
+                          ..._attendance.take(5).map((a) => Card(
+                            elevation: 0,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: ListTile(
+                              leading: Icon(
+                                a.status == 'present' ? Icons.check_circle : a.status == 'absent' ? Icons.cancel : Icons.access_time,
+                                color: a.status == 'present' ? Colors.green : a.status == 'absent' ? Colors.red : Colors.orange,
+                              ),
+                              title: Text(a.date != null ? '${a.date!.day}/${a.date!.month}/${a.date!.year}' : '', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                              trailing: StatusBadge(
+                                label: a.status.toUpperCase(),
+                                type: a.status == 'present' ? StatusType.success : a.status == 'absent' ? StatusType.error : StatusType.warning,
+                              ),
+                            ),
+                          )),
+                          const SizedBox(height: 24),
+                          Text(isUrdu ? 'حالیہ ہوم ورک' : 'Recent Homework', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 12),
+                          ..._homework.take(3).map((h) => Card(
+                            elevation: 0,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: ListTile(
+                              leading: CircleAvatar(backgroundColor: theme.colorScheme.secondaryContainer, child: Icon(Icons.assignment, color: theme.colorScheme.secondary, size: 18)),
+                              title: Text(h.title, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                              subtitle: Text(h.subjectName ?? ''),
+                              trailing: StatusBadge(label: h.status, type: false ? StatusType.success : StatusType.warning),
+                            ),
+                          )),
+                          const SizedBox(height: 24),
+                          Text(isUrdu ? 'حالیہ نتائج' : 'Recent Results', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 12),
+                          ..._results.take(3).map((r) => Card(
+                            elevation: 0,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: ListTile(
+                              leading: CircleAvatar(backgroundColor: theme.colorScheme.tertiaryContainer, child: Text(r.overallGrade ?? 'N/A', style: TextStyle(color: theme.colorScheme.tertiary, fontWeight: FontWeight.bold, fontSize: 12))),
+                              title: Text(r.examType ?? 'Exam', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                              trailing: Text('${(r.totalMarksObtained ?? 0).toStringAsFixed(0)}/${(r.totalMaxMarks ?? 0).toStringAsFixed(0)}', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                            ),
+                          )),
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            TabBar(
-              isScrollable: true,
-              tabs: [
-                Tab(text: _isUrdu ? 'حاضری' : 'Attendance'),
-                Tab(text: _isUrdu ? 'ہوم ورک' : 'Homework'),
-                Tab(text: _isUrdu ? 'نتائج' : 'Results'),
-                Tab(text: _isUrdu ? 'فیس' : 'Fee'),
-                Tab(text: _isUrdu ? 'رپورٹس' : 'Reports'),
-                Tab(text: _isUrdu ? 'پیغامات' : 'Messages'),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _buildAttendanceTab(theme),
-                  _buildHomeworkTab(theme),
-                  _buildResultsTab(theme),
-                  _buildFeeTab(theme),
-                  _buildReportsTab(theme),
-                  _buildMessagesTab(theme),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAttendanceTab(ThemeData theme) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text('Attendance Calendar', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 12),
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Container(
-            height: 200,
-            alignment: Alignment.center,
-            child: Text(
-              'Calendar view here',
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildSummaryCard(theme, 'Present: 18 | Absent: 2 | Late: 1 | Leave: 1'),
-      ],
-    );
-  }
-
-  Widget _buildHomeworkTab(ThemeData theme) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            title: const Text('Algebra Exercises'),
-            subtitle: const Text('Due: 18 Mar | Status: Pending'),
-            trailing: const Icon(Icons.chevron_right),
-          ),
-        ),
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            title: const Text('Urdu Essay'),
-            subtitle: const Text('Submitted: 12 Mar | Grade: A'),
-            trailing: const Icon(Icons.check_circle, color: Color(0xFF10B981)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildResultsTab(ThemeData theme) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            title: const Text('First Term 2024'),
-            subtitle: const Text('Percentage: 83.6% | Grade: A'),
-            trailing: IconButton(
-              icon: const Icon(Icons.download),
-              onPressed: () {},
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeeTab(ThemeData theme) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildFeeRow('Admission Fee', 'Paid', const Color(0xFF10B981)),
-                _buildFeeRow('Monthly Fee - Jan', 'Paid', const Color(0xFF10B981)),
-                _buildFeeRow('Monthly Fee - Feb', 'Paid', const Color(0xFF10B981)),
-                _buildFeeRow('Monthly Fee - Mar', 'Unpaid', const Color(0xFFEF4444)),
-                const Divider(),
-                _buildFeeRow('Balance Due', 'Rs. 5,000', const Color(0xFFEF4444)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeeRow(String label, String status, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label),
-          Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReportsTab(ThemeData theme) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        ElevatedButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.add),
-          label: Text(_isUrdu ? 'رپورٹ کی درخواست' : 'Request Report'),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            title: const Text('Progress Report'),
-            subtitle: const Text('Requested: 10 Mar | Status: Completed'),
-            trailing: IconButton(icon: const Icon(Icons.download), onPressed: () {}),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMessagesTab(ThemeData theme) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            leading: const UserAvatar(name: 'Mr. Ali', size: 40),
-            title: const Text('Mr. Ali'),
-            subtitle: const Text('Tap to message teacher'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryCard(ThemeData theme, String text) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(text, style: theme.textTheme.bodyMedium),
       ),
     );
   }

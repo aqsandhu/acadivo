@@ -20,7 +20,23 @@ class AuthState {
     this.isAuthenticated = false,
     this.isLoading = false,
     this.error,
-  });
+  /// Redirect route based on user role
+  String? get redirectRoute {
+    switch (user?.role) {
+      case UserRole.admin:
+        return '/admin/dashboard';
+      case UserRole.principal:
+        return '/principal/dashboard';
+      case UserRole.teacher:
+        return '/teacher/dashboard';
+      case UserRole.student:
+        return '/student/dashboard';
+      case UserRole.parent:
+        return '/parent/dashboard';
+      default:
+        return '/login';
+    }
+  }
 
   AuthState copyWith({
     UserModel? user,

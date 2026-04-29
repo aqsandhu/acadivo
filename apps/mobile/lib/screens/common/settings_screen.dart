@@ -1,133 +1,134 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../providers/theme_provider.dart';
+import '../../providers/locale_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
-
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _isUrdu = false;
-  ThemeMode _themeMode = ThemeMode.system;
-  bool _pushNotifications = true;
-  bool _emailNotifications = true;
-  bool _smsNotifications = false;
-
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'ترتیبات' : 'Settings',
-        isUrdu: _isUrdu,
-      ),
-      body: ListView(
-        children: [
-          _buildSection(theme, _isUrdu ? 'زبان' : 'Language'),
-          _buildLanguageTile(theme),
-          const Divider(),
-          _buildSection(theme, _isUrdu ? 'تھیم' : 'Theme'),
-          RadioListTile<ThemeMode>(
-            title: Text(_isUrdu ? 'روشن' : 'Light'),
-            value: ThemeMode.light,
-            groupValue: _themeMode,
-            onChanged: (v) => setState(() => _themeMode = v!),
-            secondary: const Icon(Icons.light_mode),
-          ),
-          RadioListTile<ThemeMode>(
-            title: Text(_isUrdu ? 'تاریک' : 'Dark'),
-            value: ThemeMode.dark,
-            groupValue: _themeMode,
-            onChanged: (v) => setState(() => _themeMode = v!),
-            secondary: const Icon(Icons.dark_mode),
-          ),
-          RadioListTile<ThemeMode>(
-            title: Text(_isUrdu ? 'سسٹم' : 'System'),
-            value: ThemeMode.system,
-            groupValue: _themeMode,
-            onChanged: (v) => setState(() => _themeMode = v!),
-            secondary: const Icon(Icons.settings_brightness),
-          ),
-          const Divider(),
-          _buildSection(theme, _isUrdu ? 'اطلاعات' : 'Notifications'),
-          SwitchListTile(
-            title: Text(_isUrdu ? 'پش اطلاعات' : 'Push Notifications'),
-            subtitle: Text(_isUrdu ? 'ایپ اطلاعات وصول کریں' : 'Receive in-app notifications'),
-            value: _pushNotifications,
-            onChanged: (v) => setState(() => _pushNotifications = v),
-            secondary: const Icon(Icons.notifications_active_outlined),
-          ),
-          SwitchListTile(
-            title: Text(_isUrdu ? 'ای میل اطلاعات' : 'Email Notifications'),
-            subtitle: Text(_isUrdu ? 'ای میل الرٹ وصول کریں' : 'Receive email alerts'),
-            value: _emailNotifications,
-            onChanged: (v) => setState(() => _emailNotifications = v),
-            secondary: const Icon(Icons.email_outlined),
-          ),
-          SwitchListTile(
-            title: Text(_isUrdu ? 'ایس ایم ایس اطلاعات' : 'SMS Notifications'),
-            subtitle: Text(_isUrdu ? 'ٹیکسٹ میسج وصول کریں' : 'Receive text messages'),
-            value: _smsNotifications,
-            onChanged: (v) => setState(() => _smsNotifications = v),
-            secondary: const Icon(Icons.sms_outlined),
-          ),
-          const Divider(),
-          _buildSection(theme, _isUrdu ? 'پرائیویسی' : 'Privacy'),
-          ListTile(
-            leading: const Icon(Icons.lock_outline),
-            title: Text(_isUrdu ? 'پرائیویسی پالیسی' : 'Privacy Policy'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.description_outlined),
-            title: Text(_isUrdu ? 'شرائط و ضوابط' : 'Terms of Service'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          const Divider(),
-          _buildSection(theme, _isUrdu ? 'ایکائیو کے بارے میں' : 'About Acadivo'),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: Text(_isUrdu ? 'ورژن' : 'Version'),
-            subtitle: const Text('1.0.0'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.star_outline),
-            title: Text(_isUrdu ? 'ایپ کو ریٹ کریں' : 'Rate the App'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSection(ThemeData theme, String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.primary,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1,
+    final localeNotifier = ref.read(localeProvider.notifier);
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'ترتیبات' : 'Settings',
+          isUrdu: isUrdu,
         ),
-      ),
-    );
-  }
-
-  Widget _buildLanguageTile(ThemeData theme) {
-    return ListTile(
-      leading: const Icon(Icons.language),
-      title: Text(_isUrdu ? 'زبان' : 'Language'),
-      subtitle: Text(_isUrdu ? 'اردو' : 'English'),
-      trailing: Switch(
-        value: _isUrdu,
-        onChanged: (v) => setState(() => _isUrdu = v),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(isUrdu ? 'ظاہریت' : 'Appearance', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    secondary: const Icon(Icons.dark_mode_outlined),
+                    title: Text(isUrdu ? 'ڈارک موڈ' : 'Dark Mode'),
+                    subtitle: Text(isUrdu ? 'ڈارک تھیم فعال کریں' : 'Enable dark theme'),
+                    value: ref.watch(themeProvider) == ThemeMode.dark,
+                    onChanged: (v) => ref.read(themeProvider.notifier).toggle(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(isUrdu ? 'زبان' : 'Language', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                children: [
+                  RadioListTile<Locale>(
+                    title: const Text('English'),
+                    value: const Locale('en', 'US'),
+                    groupValue: ref.watch(localeProvider),
+                    onChanged: (v) { if (v != null) localeNotifier.setLocale(v); },
+                  ),
+                  const Divider(height: 1),
+                  RadioListTile<Locale>(
+                    title: const Text('Urdu'),
+                    value: const Locale('ur', 'PK'),
+                    groupValue: ref.watch(localeProvider),
+                    onChanged: (v) { if (v != null) localeNotifier.setLocale(v); },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(isUrdu ? 'براؤزر' : 'Notifications', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    secondary: const Icon(Icons.notifications_outlined),
+                    title: Text(isUrdu ? 'پش نوٹیفیکیشن' : 'Push Notifications'),
+                    subtitle: Text(isUrdu ? 'پش نوٹیفیکیشن وصول کریں' : 'Receive push notifications'),
+                    value: true,
+                    onChanged: (v) {},
+                  ),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.email_outlined),
+                    title: Text(isUrdu ? 'ای میل نوٹیفیکیشن' : 'Email Notifications'),
+                    subtitle: Text(isUrdu ? 'ای میل نوٹیفیکیشن وصول کریں' : 'Receive email notifications'),
+                    value: false,
+                    onChanged: (v) {},
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(isUrdu ? 'اکاؤنٹ' : 'Account', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.lock_outline),
+                    title: Text(isUrdu ? 'پاس ورڈ تبدیل کریں' : 'Change Password'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {},
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    title: Text(isUrdu ? 'لاگ آؤٹ' : 'Logout', style: const TextStyle(color: Colors.red)),
+                    onTap: () => ref.read(authProvider.notifier).logout(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

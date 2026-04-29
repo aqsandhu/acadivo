@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { QAItem } from "@/types";
 import { HelpCircle, CheckCircle2, Globe } from "lucide-react";
 

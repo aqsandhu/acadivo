@@ -1,390 +1,300 @@
-// lib/routing/app_router.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 
-import '../models/user_model.dart';
+import '../screens/screens.dart';
 import '../providers/auth_provider.dart';
-import '../screens/auth/login_screen.dart';
-import '../screens/auth/forgot_password_screen.dart';
-import '../screens/auth/reset_password_screen.dart';
-import '../screens/auth/setup_parent_password_screen.dart';
-import '../screens/dashboard/dashboard_screen.dart';
-import '../screens/chat/chat_screen.dart';
-import '../screens/shared/notifications_screen.dart';
-import '../screens/shared/settings_screen.dart';
-import '../screens/shared/profile_screen.dart';
-import '../splash.dart';
+import '../models/user_model.dart';
 import 'route_names.dart';
-
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
-final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
 
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
-    initialLocation: RouteNames.splash,
-    debugLogDiagnostics: false,
+    initialLocation: RouteNames.login,
     redirect: (context, state) {
-      final isAuthenticated = authState.isAuthenticated;
-      final isLoading = authState.isLoading;
-      final location = state.matchedLocation;
+      // Auth state is now available here through Riverpod context
+      // But for simplicity, we'll check through authState
+      final isLoggedIn = authState.isAuthenticated;
+      final isAuthRoute = state.matchedLocation == RouteNames.login ||
+          state.matchedLocation == RouteNames.forgotPassword ||
+          state.matchedLocation == RouteNames.resetPassword;
 
-      // Don't redirect while loading
-      if (isLoading) return null;
-
-      // Allow splash screen
-      if (location == RouteNames.splash) return null;
-
-      // Allow auth routes
-      final isAuthRoute = location == RouteNames.login ||
-          location == RouteNames.forgotPassword ||
-          location == RouteNames.resetPassword ||
-          location == RouteNames.setupParentPassword;
-
-      if (!isAuthenticated) {
-        return isAuthRoute ? null : RouteNames.login;
+      if (!isLoggedIn && !isAuthRoute) {
+        return RouteNames.login;
       }
 
-      // Redirect authenticated users away from auth routes
-      if (isAuthenticated && isAuthRoute) {
-        return _getRoleBasedRoute(authState.user!.role);
+      if (isLoggedIn && isAuthRoute) {
+        // Redirect to role-specific dashboard
+        return authState.redirectRoute ?? RouteNames.studentDashboard;
       }
 
       return null;
     },
     routes: [
-      // Splash
-      GoRoute(
-        path: RouteNames.splash,
-        builder: (context, state) => const SplashScreen(),
-      ),
-
-      // Auth routes
+      // Auth Routes
       GoRoute(
         path: RouteNames.login,
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: RouteNames.forgotPassword,
-        builder: (context, state) => const ForgotPasswordScreen(),
+        builder: (context, state) => Scaffold(
+          appBar: AppBar(title: const Text('Forgot Password')),
+          body: const Center(child: Text('Forgot Password Screen')),
+        ),
+      ),
+
+      // Admin Routes
+      GoRoute(
+        path: RouteNames.adminDashboard,
+        builder: (context, state) => const AdminDashboardScreen(),
       ),
       GoRoute(
-        path: RouteNames.resetPassword,
+        path: RouteNames.adminStudents,
+        builder: (context, state) => const ManageStudentsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminTeachers,
+        builder: (context, state) => const ManageTeachersScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminParents,
+        builder: (context, state) => const ManageParentsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminClasses,
+        builder: (context, state) => const ManageClassesScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminSubjects,
+        builder: (context, state) => const ManageSubjectsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminTimetable,
+        builder: (context, state) => const TimetableBuilderScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminAttendance,
+        builder: (context, state) => const AdminAttendanceScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminFee,
+        builder: (context, state) => const FeeManagementScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminAnnouncements,
+        builder: (context, state) => const SchoolAnnouncementsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminSettings,
+        builder: (context, state) => const SchoolSettingsScreen(),
+      ),
+
+      // Principal Routes
+      GoRoute(
+        path: RouteNames.principalDashboard,
+        builder: (context, state) => const PrincipalDashboardScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.principalTeachers,
+        builder: (context, state) => const SchoolTeachersScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.principalStudents,
+        builder: (context, state) => const SchoolStudentsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.principalParents,
+        builder: (context, state) => const SchoolParentsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.principalAttendance,
+        builder: (context, state) => const SchoolAttendanceScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.principalFee,
+        builder: (context, state) => const SchoolFeeScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.principalMessages,
+        builder: (context, state) => const PrincipalMessagesScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.principalAnnouncements,
+        builder: (context, state) => const PrincipalAnnouncementsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.principalNotifications,
+        builder: (context, state) => const PrincipalNotificationsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.principalReports,
+        builder: (context, state) => const SchoolReportsScreen(),
+      ),
+
+      // Teacher Routes
+      GoRoute(
+        path: RouteNames.teacherDashboard,
+        builder: (context, state) => const TeacherDashboardScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherClasses,
+        builder: (context, state) => const TeacherClassesScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherAttendance,
+        builder: (context, state) => const MarkAttendanceScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherHomework,
+        builder: (context, state) => const TeacherHomeworkScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherHomework + '/create',
+        builder: (context, state) => const CreateHomeworkScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherMarks,
+        builder: (context, state) => const TeacherMarksScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherMarks + '/grade',
+        builder: (context, state) => const GradeSubmissionScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherMessages,
+        builder: (context, state) => const TeacherMessagesScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherQa,
+        builder: (context, state) => const TeacherQaScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherReports,
+        builder: (context, state) => const TeacherReportsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherTimetable,
+        builder: (context, state) => const TeacherTimetableScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherNotifications,
+        builder: (context, state) => const TeacherNotificationsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherProfile,
+        builder: (context, state) => const TeacherProfileScreen(),
+      ),
+
+      // Student Routes
+      GoRoute(
+        path: RouteNames.studentDashboard,
+        builder: (context, state) => const StudentDashboardScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.studentAttendance,
+        builder: (context, state) => const StudentAttendanceScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.studentHomework,
+        builder: (context, state) => const StudentHomeworkScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.studentMarks,
+        builder: (context, state) => const StudentMarksScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.studentMessages,
+        builder: (context, state) => const StudentMessagesScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.studentQa,
+        builder: (context, state) => const StudentQaScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.studentResults,
+        builder: (context, state) => const StudentResultsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.studentTimetable,
+        builder: (context, state) => const StudentTimetableScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.studentNotifications,
+        builder: (context, state) => const StudentNotificationsScreen(),
+      ),
+
+      // Parent Routes
+      GoRoute(
+        path: RouteNames.parentDashboard,
+        builder: (context, state) => const ParentDashboardScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.parentChildren,
+        builder: (context, state) => const ParentChildrenScreen(),
+      ),
+      GoRoute(
+        path: '/parent/child/:id',
         builder: (context, state) {
-          final token = state.uri.queryParameters['token'];
-          return ResetPasswordScreen(token: token);
+          final childId = state.pathParameters['id'] ?? '';
+          return ChildDetailScreen(childId: childId);
         },
       ),
       GoRoute(
-        path: RouteNames.setupParentPassword,
-        builder: (context, state) => const SetupParentPasswordScreen(),
+        path: RouteNames.parentAttendance,
+        builder: (context, state) => const ParentAttendanceScreen(),
       ),
-
-      // Dashboard - role-based
       GoRoute(
-        path: RouteNames.dashboard,
-        builder: (context, state) => const DashboardScreen(),
+        path: RouteNames.parentFee,
+        builder: (context, state) => const ParentFeeScreen(),
       ),
-
-      // Teacher routes
-      ShellRoute(
-        navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) => child,
-        routes: [
-          GoRoute(
-            path: RouteNames.teacherDashboard,
-            builder: (context, state) => const DashboardScreen(),
-          ),
-          GoRoute(
-            path: RouteNames.teacherAttendance,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Teacher Attendance')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.teacherHomework,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Teacher Homework')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.teacherMarks,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Teacher Marks')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.teacherTimetable,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Teacher Timetable')),
-            ),
-          ),
-        ],
-      ),
-
-      // Student routes
-      ShellRoute(
-        navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) => child,
-        routes: [
-          GoRoute(
-            path: RouteNames.studentDashboard,
-            builder: (context, state) => const DashboardScreen(),
-          ),
-          GoRoute(
-            path: RouteNames.studentAttendance,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Student Attendance')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.studentHomework,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Student Homework')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.studentResults,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Student Results')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.studentTimetable,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Student Timetable')),
-            ),
-          ),
-        ],
-      ),
-
-      // Parent routes
-      ShellRoute(
-        navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) => child,
-        routes: [
-          GoRoute(
-            path: RouteNames.parentDashboard,
-            builder: (context, state) => const DashboardScreen(),
-          ),
-          GoRoute(
-            path: RouteNames.parentChildren,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Parent Children')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.parentAttendance,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Parent Attendance')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.parentHomework,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Parent Homework')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.parentResults,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Parent Results')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.parentFee,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Parent Fee')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.parentReports,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Parent Reports')),
-            ),
-          ),
-        ],
-      ),
-
-      // Admin routes
-      ShellRoute(
-        navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) => child,
-        routes: [
-          GoRoute(
-            path: RouteNames.adminDashboard,
-            builder: (context, state) => const DashboardScreen(),
-          ),
-          GoRoute(
-            path: RouteNames.adminUsers,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Admin Users')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.adminClasses,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Admin Classes')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.adminStudents,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Admin Students')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.adminTeachers,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Admin Teachers')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.adminFee,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Admin Fee')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.adminAnnouncements,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Admin Announcements')),
-            ),
-          ),
-        ],
-      ),
-
-      // Principal routes
-      ShellRoute(
-        navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) => child,
-        routes: [
-          GoRoute(
-            path: RouteNames.principalDashboard,
-            builder: (context, state) => const DashboardScreen(),
-          ),
-          GoRoute(
-            path: RouteNames.principalTeachers,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Principal Teachers')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.principalStudents,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Principal Students')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.principalAttendance,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Principal Attendance')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.principalFee,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Principal Fee')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.principalResults,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Principal Results')),
-            ),
-          ),
-        ],
-      ),
-
-      // Super Admin routes
-      ShellRoute(
-        navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) => child,
-        routes: [
-          GoRoute(
-            path: RouteNames.superAdminDashboard,
-            builder: (context, state) => const DashboardScreen(),
-          ),
-          GoRoute(
-            path: RouteNames.superAdminSchools,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Super Admin Schools')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.superAdminUsers,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Super Admin Users')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.superAdminSubscriptions,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Super Admin Subscriptions')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.superAdminAdvertisements,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Super Admin Ads')),
-            ),
-          ),
-          GoRoute(
-            path: RouteNames.superAdminAnalytics,
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('Super Admin Analytics')),
-            ),
-          ),
-        ],
-      ),
-
-      // Shared routes
       GoRoute(
-        path: RouteNames.chat,
-        builder: (context, state) {
-          final userId = state.pathParameters['userId'];
-          return ChatScreen(userId: userId ?? '');
-        },
+        path: RouteNames.parentHomework,
+        builder: (context, state) => const ParentHomeworkScreen(),
       ),
+      GoRoute(
+        path: RouteNames.parentMessages,
+        builder: (context, state) => const ParentMessagesScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.parentQa,
+        builder: (context, state) => const ParentQaScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.parentReports,
+        builder: (context, state) => const ParentReportsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.parentResults,
+        builder: (context, state) => const ParentResultsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.parentNotifications,
+        builder: (context, state) => const ParentNotificationsScreen(),
+      ),
+
+      // Common Routes
       GoRoute(
         path: RouteNames.notifications,
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.profile,
+        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: RouteNames.settings,
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
-        path: RouteNames.profile,
-        builder: (context, state) => const ProfileScreen(),
+        path: '/messages/:userId',
+        builder: (context, state) {
+          final userId = state.pathParameters['userId'] ?? '';
+          return ChatScreen(userId: userId);
+        },
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Route not found: ${state.matchedLocation}'),
-      ),
-    ),
   );
 });
-
-String _getRoleBasedRoute(UserRole role) {
-  switch (role) {
-    case UserRole.teacher:
-      return RouteNames.teacherDashboard;
-    case UserRole.student:
-      return RouteNames.studentDashboard;
-    case UserRole.parent:
-      return RouteNames.parentDashboard;
-    case UserRole.schoolAdmin:
-      return RouteNames.adminDashboard;
-    case UserRole.principal:
-      return RouteNames.principalDashboard;
-    case UserRole.superAdmin:
-      return RouteNames.superAdminDashboard;
-    default:
-      return RouteNames.dashboard;
-  }
-}

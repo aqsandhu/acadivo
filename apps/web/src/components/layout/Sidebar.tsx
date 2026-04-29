@@ -23,8 +23,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { Avatar } from "@/components/ui/Avatar";
-import { Button } from "@/components/ui/Button";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 interface NavItem {
   label: string;

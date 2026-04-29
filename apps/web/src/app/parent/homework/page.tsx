@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { HomeworkItem, ChildProfile } from "@/types";
 import { AlertTriangle } from "lucide-react";
 

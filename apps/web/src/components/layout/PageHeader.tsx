@@ -3,7 +3,7 @@
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 export interface PageHeaderProps {
   title: string;

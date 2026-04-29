@@ -1,11 +1,15 @@
 /**
  * Connection handler for Socket.io client lifecycle
  * Manages authentication, room joining, presence, and disconnection
+ * Includes: input validation, rate limiting, cross-tenant validation, multi-device presence
  */
 
 import { Server, Socket } from "socket.io";
 import { AuthenticatedSocket } from "../types/socket";
 import { socketAuthMiddleware } from "../middleware/socketAuth";
+import { socketInputValidationMiddleware } from "../middleware/inputValidation";
+import { socketRateLimitMiddleware } from "../middleware/rateLimit";
+import { crossTenantValidationMiddleware } from "../middleware/tenantValidation";
 import { setupRooms, leaveAllRooms } from "../services/room.service";
 import { setOnline, setOffline, getOnlineUsers, broadcastPresenceUpdate, refreshOnlineStatus } from "../services/presence.service";
 import { logger } from "../utils/logger";
@@ -14,11 +18,16 @@ const HEARTBEAT_INTERVAL_MS = 30000; // 30 seconds
 const HEARTBEAT_TIMEOUT_MS = 60000; // 60 seconds
 
 export function registerConnectionHandlers(io: Server): void {
+  // Global middleware chain
   io.use(socketAuthMiddleware);
+  io.use(socketInputValidationMiddleware);
+  io.use(socketRateLimitMiddleware);
+  io.use(crossTenantValidationMiddleware);
 
   io.on("connection", async (socket: Socket) => {
     const authSocket = socket as AuthenticatedSocket;
     const { userId, role, tenantId, name } = authSocket.user;
+    const deviceId = socket.handshake.auth.deviceId as string | undefined;
 
     logger.info(`Client connected: ${socket.id} — User ${userId} (${role}) — Tenant ${tenantId}`);
 
@@ -26,8 +35,8 @@ export function registerConnectionHandlers(io: Server): void {
       // 1. Join user, tenant, role, and notification rooms
       setupRooms(authSocket);
 
-      // 2. Set user as online
-      await setOnline(userId, tenantId);
+      // 2. Set user as online (with device tracking)
+      await setOnline(userId, tenantId, deviceId);
       await broadcastPresenceUpdate(io, userId, tenantId, "online");
 
       // 3. Get current online users for tenant
@@ -73,8 +82,8 @@ export function registerConnectionHandlers(io: Server): void {
         );
 
         try {
-          // 1. Set user offline
-          await setOffline(userId, tenantId);
+          // 1. Set user offline (with device tracking)
+          await setOffline(userId, tenantId, deviceId);
           await broadcastPresenceUpdate(io, userId, tenantId, "offline");
 
           // 2. Leave all rooms

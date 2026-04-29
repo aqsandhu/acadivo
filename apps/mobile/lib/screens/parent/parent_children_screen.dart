@@ -1,155 +1,109 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_widget.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/stats_card.dart';
+import '../../widgets/status_badge.dart';
 import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/parent_service.dart';
+import '../../services/api_service.dart';
+import '../../models/student_model.dart';
 
 class ParentChildrenScreen extends ConsumerStatefulWidget {
   const ParentChildrenScreen({super.key});
-
   @override
   ConsumerState<ParentChildrenScreen> createState() => _ParentChildrenScreenState();
 }
 
 class _ParentChildrenScreenState extends ConsumerState<ParentChildrenScreen> {
-  bool _isUrdu = false;
+  bool _isLoading = true;
+  String? _error;
+  List<StudentModel> _children = [];
 
-  final List<Map<String, dynamic>> _children = [
-    {
-      'name': 'Ahmad Ali',
-      'class': 'Class 8-A',
-      'roll': 101,
-      'attendanceStreak': 15,
-      'latestGrade': 'A',
-      'avatar': null,
-    },
-    {
-      'name': 'Fatima Ali',
-      'class': 'Class 5-B',
-      'roll': 45,
-      'attendanceStreak': 10,
-      'latestGrade': 'B+',
-      'avatar': null,
-    },
-  ];
+  @override
+  void initState() { super.initState(); _loadData(); }
+
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = ParentService(api);
+      final data = await service.getMyChildren();
+      setState(() { _children = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'میرے بچے' : 'My Children',
-        isUrdu: _isUrdu,
-      ),
-      body: _children.isEmpty
-          ? EmptyStateWidget(
-              icon: Icons.family_restroom_outlined,
-              title: _isUrdu ? 'کوئی بچے نہیں' : 'No Children',
-              subtitle: _isUrdu ? 'آپ کے اکاؤنٹ سے کوئی بچے منسلک نہیں' : 'No children linked to your account',
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _children.length,
-              itemBuilder: (context, index) {
-                final child = _children[index];
-                return Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-                  ),
-                  child: InkWell(
-                    onTap: () {},
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              UserAvatar(
-                                name: child['name'],
-                                size: 56,
-                                imageUrl: child['avatar'],
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      child['name'],
-                                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                                    ),
-                                    Text(
-                                      '${child['class']} | Roll: ${child['roll']}',
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant,
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'میرے بچے' : 'My Children',
+          isUrdu: isUrdu,
+        ),
+        body: _isLoading && _children.isEmpty
+            ? const Center(child: LoadingWidget())
+            : _error != null && _children.isEmpty
+                ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                : _children.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.child_care_outlined,
+                        title: isUrdu ? 'کوئی بچہ نہیں' : 'No Children',
+                        subtitle: isUrdu ? 'آپ کے بچے درج نہیں' : 'No children registered.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ListView.builder(
+                          itemCount: _children.length,
+                          padding: const EdgeInsets.all(16),
+                          itemBuilder: (context, index) {
+                            final child = _children[index];
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () => context.push('/parent/child/${child.id}'),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    children: [
+                                      UserAvatar(name: child.name, size: 50),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(child.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                                            const SizedBox(height: 4),
+                                            Text('${child.className ?? ""} • ${child.sectionName ?? ""}', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                                            const SizedBox(height: 4),
+                                            Text('Roll: ${child.rollNumber ?? "N/A"}', style: theme.textTheme.bodySmall),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      const Icon(Icons.chevron_right),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              _buildMetric(
-                                theme,
-                                Icons.local_fire_department,
-                                '${child['attendanceStreak']} days',
-                                'Streak',
-                                const Color(0xFFF59E0B),
-                              ),
-                              _buildMetric(
-                                theme,
-                                Icons.grade,
-                                child['latestGrade'],
-                                'Latest Grade',
-                                const Color(0xFF10B981),
-                              ),
-                            ],
-                          ),
-                        ],
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-
-  Widget _buildMetric(ThemeData theme, IconData icon, String value, String label, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

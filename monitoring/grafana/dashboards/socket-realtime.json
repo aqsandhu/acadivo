@@ -1,0 +1,122 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Acadivo - Socket Real-time",
+    "tags": [
+      "acadivo",
+      "socket",
+      "realtime"
+    ],
+    "timezone": "Asia/Karachi",
+    "schemaVersion": 36,
+    "refresh": "5s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Connections",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "socketio_connections_active",
+            "legendFormat": "Connections"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Active Rooms",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "socketio_rooms_total",
+            "legendFormat": "Rooms"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Memory Usage",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "socketio_memory_bytes{type=\"rss\"}",
+            "legendFormat": "RSS"
+          },
+          {
+            "expr": "socketio_memory_bytes{type=\"heapUsed\"}",
+            "legendFormat": "Heap"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Connection Trend",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "socketio_connections_active",
+            "legendFormat": "Connections"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Redis Adapter Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"acadivo-socket\"}",
+            "legendFormat": "Status"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 6,
+        "title": "Socket Uptime",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "socketio_uptime_seconds",
+            "legendFormat": "Uptime"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      }
+    ]
+  }
+}

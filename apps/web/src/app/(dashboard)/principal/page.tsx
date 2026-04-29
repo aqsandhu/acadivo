@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { useMockApi, getPrincipalStats, getTeachers, getStudents, getParents, getAnnouncements, getFeeRecords } from "@/services/mockApi";
+import { useMockApi, getPrincipalStats, getTeachers, getStudents, getParents, getAnnouncements, getFeeRecords } from "@/services/apiClient";
 import Link from "next/link";
 
 function StatCard({ label, value, icon, change }: { label: string; value: string | number; icon: React.ReactNode; change?: number }) {

@@ -1,196 +1,130 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_dropdown.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/teacher_service.dart';
+import '../../services/api_service.dart';
+import '../../models/mark_model.dart';
 
 class TeacherMarksScreen extends ConsumerStatefulWidget {
   const TeacherMarksScreen({super.key});
-
   @override
   ConsumerState<TeacherMarksScreen> createState() => _TeacherMarksScreenState();
 }
 
 class _TeacherMarksScreenState extends ConsumerState<TeacherMarksScreen> {
-  String? _selectedClass;
-  String? _selectedSection;
-  String? _selectedSubject;
-  String? _selectedExam;
-  bool _isLoading = false;
-  bool _isUrdu = false;
+  bool _isLoading = true;
+  String? _error;
+  List<MarkModel> _marks = [];
+  List<MarkModel> _filtered = [];
+  final TextEditingController _searchController = TextEditingController();
+  String _examType = 'midterm';
 
-  final List<Map<String, dynamic>> _students = [
-    {'name': 'Ahmad Ali', 'roll': 101, 'marks': 18, 'max': 20},
-    {'name': 'Bilal Khan', 'roll': 102, 'marks': 15, 'max': 20},
-    {'name': 'Fatima Zahra', 'roll': 103, 'marks': 20, 'max': 20},
-    {'name': 'Hassan Raza', 'roll': 104, 'marks': 8, 'max': 20},
-    {'name': 'Imran Shah', 'roll': 105, 'marks': 12, 'max': 20},
-  ];
+  @override
+  void initState() { super.initState(); _loadData(); }
 
-  String _calculateGrade(double percentage) {
-    if (percentage >= 90) return 'A+';
-    if (percentage >= 80) return 'A';
-    if (percentage >= 70) return 'B';
-    if (percentage >= 60) return 'C';
-    if (percentage >= 50) return 'D';
-    return 'F';
-  }
-
-  Color _gradeColor(String grade) {
-    switch (grade) {
-      case 'A+': return const Color(0xFF10B981);
-      case 'A': return const Color(0xFF10B981);
-      case 'B': return const Color(0xFF3B82F6);
-      case 'C': return const Color(0xFFF59E0B);
-      case 'D': return const Color(0xFFF59E0B);
-      case 'F': return const Color(0xFFEF4444);
-      default: return Colors.grey;
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = TeacherService(api);
+      // Using a default classId - in real app would be selected
+      final data = await service.getMarks(classId: 'default', examType: _examType);
+      setState(() { _marks = data; _filtered = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
     }
   }
 
+  void _search(String query) {
+    final q = query.toLowerCase();
+    setState(() {
+      _filtered = _marks.where((m) =>
+        (m.studentName?.toLowerCase().contains(q) ?? false) ||
+        (m.subjectName?.toLowerCase().contains(q) ?? false)
+      ).toList();
+    });
+  }
+
+  @override
+  void dispose() { _searchController.dispose(); super.dispose(); }
+
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'نمبر درج کریں' : 'Marks Entry',
-        isUrdu: _isUrdu,
-      ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                SizedBox(
-                  width: 140,
-                  child: CustomDropdown<String>(
-                    label: _isUrdu ? 'کلاس' : 'Class',
-                    value: _selectedClass,
-                    items: const [
-                      DropdownMenuItem(value: '8', child: Text('Class 8')),
-                      DropdownMenuItem(value: '9', child: Text('Class 9')),
-                      DropdownMenuItem(value: '10', child: Text('Class 10')),
-                    ],
-                    onChanged: (v) => setState(() => _selectedClass = v),
-                  ),
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'نمبرز' : 'Marks',
+          isUrdu: isUrdu,
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => context.push(RouteNames.teacherMarks + '/grade'),
+          child: const Icon(Icons.add),
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _search,
+                decoration: InputDecoration(
+                  hintText: isUrdu ? 'تلاش کریں...' : 'Search marks...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                SizedBox(
-                  width: 140,
-                  child: CustomDropdown<String>(
-                    label: _isUrdu ? 'سیکشن' : 'Section',
-                    value: _selectedSection,
-                    items: const [
-                      DropdownMenuItem(value: 'A', child: Text('A')),
-                      DropdownMenuItem(value: 'B', child: Text('B')),
-                      DropdownMenuItem(value: 'C', child: Text('C')),
-                    ],
-                    onChanged: (v) => setState(() => _selectedSection = v),
-                  ),
-                ),
-                SizedBox(
-                  width: 160,
-                  child: CustomDropdown<String>(
-                    label: _isUrdu ? 'مضمون' : 'Subject',
-                    value: _selectedSubject,
-                    items: const [
-                      DropdownMenuItem(value: 'math', child: Text('Mathematics')),
-                      DropdownMenuItem(value: 'science', child: Text('Science')),
-                      DropdownMenuItem(value: 'physics', child: Text('Physics')),
-                    ],
-                    onChanged: (v) => setState(() => _selectedSubject = v),
-                  ),
-                ),
-                SizedBox(
-                  width: 160,
-                  child: CustomDropdown<String>(
-                    label: _isUrdu ? 'امتحان' : 'Exam',
-                    value: _selectedExam,
-                    items: const [
-                      DropdownMenuItem(value: 'mid1', child: Text('Mid-Term 1')),
-                      DropdownMenuItem(value: 'mid2', child: Text('Mid-Term 2')),
-                      DropdownMenuItem(value: 'final', child: Text('Final')),
-                    ],
-                    onChanged: (v) => setState(() => _selectedExam = v),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: MaterialStatePropertyAll(theme.colorScheme.primaryContainer.withOpacity(0.3)),
-                columns: [
-                  DataColumn(label: Text(_isUrdu ? 'رول نمبر' : 'Roll No')),
-                  DataColumn(label: Text(_isUrdu ? 'نام' : 'Name')),
-                  DataColumn(label: Text(_isUrdu ? 'نمبر' : 'Marks')),
-                  DataColumn(label: Text(_isUrdu ? 'فیصد' : '%')),
-                  DataColumn(label: Text(_isUrdu ? 'گریڈ' : 'Grade')),
-                ],
-                rows: _students.map((s) {
-                  final percentage = (s['marks'] / s['max'] * 100);
-                  final grade = _calculateGrade(percentage);
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(s['roll'].toString())),
-                      DataCell(Text(s['name'])),
-                      DataCell(
-                        SizedBox(
-                          width: 60,
-                          child: TextFormField(
-                            initialValue: s['marks'].toString(),
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            onChanged: (v) {
-                              setState(() => s['marks'] = int.tryParse(v) ?? 0);
-                            },
-                          ),
-                        ),
-                      ),
-                      DataCell(Text('${percentage.toStringAsFixed(1)}%')),
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _gradeColor(grade).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            grade,
-                            style: TextStyle(
-                              color: _gradeColor(grade),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: CustomButton(
-              label: _isUrdu ? 'نمبر محفوظ کریں' : 'Save Marks',
-              isLoading: _isLoading,
-              onPressed: () {
-                setState(() => _isLoading = true);
-                Future.delayed(const Duration(seconds: 1), () {
-                  setState(() => _isLoading = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(_isUrdu ? 'نمبر محفوظ ہو گئے' : 'Marks saved successfully')),
-                  );
-                });
-              },
+            Expanded(
+              child: _isLoading && _marks.isEmpty
+                ? const Center(child: LoadingWidget())
+                : _error != null && _marks.isEmpty
+                  ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                  : _filtered.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.score_outlined,
+                        title: isUrdu ? 'کوئی نمبر نہیں' : 'No Marks',
+                        subtitle: isUrdu ? 'کوئی نمبر درج نہیں' : 'No marks recorded yet.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ListView.builder(
+                          itemCount: _filtered.length,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemBuilder: (context, index) {
+                            final m = _filtered[index];
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: theme.colorScheme.tertiaryContainer,
+                                  child: Text('${m.marksObtained ?? 0}', style: TextStyle(color: theme.colorScheme.tertiary, fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                                title: Text(m.studentName ?? 'Unknown', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                subtitle: Text('${m.subjectName ?? ""} • ${m.examType ?? ""}'),
+                                trailing: Text('${m.marksObtained ?? 0}/${m.totalMarks ?? 0}', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

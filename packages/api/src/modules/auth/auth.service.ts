@@ -333,7 +333,9 @@ export async function forgotPassword(identifier: string) {
     { expiresIn: "1h" }
   );
 
-  await redis.setex(`reset:${user.id}`, 3600, resetToken);
+  // Hash the token with crypto before storing
+  const tokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+  await redis.setex(`reset:${user.id}`, 3600, tokenHash);
 
   await sendPasswordResetEmail(user.email, resetToken, `${user.firstName} ${user.lastName}`);
 
@@ -350,8 +352,9 @@ export async function resetPassword(dto: ResetPasswordDTO) {
     throw ApiError.badRequest("Invalid reset token", "INVALID_RESET_TOKEN");
   }
 
+  const tokenHash = crypto.createHash("sha256").update(dto.token).digest("hex");
   const stored = await redis.get(`reset:${decoded.userId}`);
-  if (!stored || stored !== dto.token) {
+  if (!stored || stored !== tokenHash) {
     throw ApiError.badRequest("Reset token expired or invalid", "RESET_TOKEN_INVALID");
   }
 
@@ -424,30 +427,21 @@ export async function setup2FA(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw ApiError.notFound("User not found", "USER_NOT_FOUND");
 
-  // Generate TOTP secret using a simple approach without external 2FA lib if not installed
-  const secret = `${userId}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const base32Secret = Buffer.from(secret).toString("base64").slice(0, 32).toUpperCase();
+  const { authenticator } = require("otplib");
+  const QRCode = require("qrcode");
 
+  const secret = authenticator.generateSecret();
   await prisma.user.update({
     where: { id: userId },
-    data: { twoFactorSecret: base32Secret },
+    data: { twoFactorSecret: secret },
   });
 
-  // Build otpauth URL
-  const otpauthUrl = `otpauth://totp/Acadivo:${user.email}?secret=${base32Secret}&issuer=Acadivo`;
-
-  // Generate QR code data URL if QRCode is available, otherwise return raw
-  let qrCodeDataUrl: string | null = null;
-  try {
-    const QRCodeLib = require("qrcode");
-    qrCodeDataUrl = await QRCodeLib.toDataURL(otpauthUrl);
-  } catch {
-    qrCodeDataUrl = null;
-  }
+  const otpauthUrl = authenticator.keyuri(user.email, "Acadivo", secret);
+  const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
 
   return {
     message: "2FA setup initiated. Scan the QR code with your authenticator app.",
-    secret: base32Secret,
+    secret,
     otpauthUrl,
     qrCodeDataUrl,
   };
@@ -468,9 +462,9 @@ export async function verify2FA(userId: string, code: string, tempToken?: string
   const user = await prisma.user.findUnique({ where: { id: targetUserId } });
   if (!user || !user.twoFactorSecret) throw ApiError.badRequest("2FA not set up", "2FA_NOT_SETUP");
 
-  // Simple TOTP validation using a time-windowed HMAC approach
-  const expected = generateTOTP(user.twoFactorSecret);
-  if (expected !== code) {
+  const { authenticator } = require("otplib");
+  const isValid = authenticator.verify({ token: code, secret: user.twoFactorSecret });
+  if (!isValid) {
     throw ApiError.badRequest("Invalid 2FA code", "INVALID_2FA_CODE");
   }
 
@@ -495,15 +489,28 @@ export async function verify2FA(userId: string, code: string, tempToken?: string
   return { message: "2FA enabled successfully" };
 }
 
-/** Simple TOTP generator for our custom secret */
-function generateTOTP(secret: string, window = 0): string {
-  const crypto = require("crypto");
-  const epoch = Math.floor(Date.now() / 1000 / 30) + window;
-  const hmac = crypto.createHmac("sha1", secret).update(Buffer.from(epoch.toString())).digest();
-  const offset = hmac[hmac.length - 1] & 0xf;
-  const code = ((hmac[offset] & 0x7f) << 24 | (hmac[offset + 1] & 0xff) << 16 | (hmac[offset + 2] & 0xff) << 8 | (hmac[offset + 3] & 0xff)) % 1000000;
-  return String(code).padStart(6, "0");
+/**
+ * Disable 2FA for a user.
+ */
+export async function disable2FA(userId: string, code: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.twoFactorSecret) throw ApiError.badRequest("2FA not set up", "2FA_NOT_SETUP");
+
+  const { authenticator } = require("otplib");
+  const isValid = authenticator.verify({ token: code, secret: user.twoFactorSecret });
+  if (!isValid) {
+    throw ApiError.badRequest("Invalid 2FA code", "INVALID_2FA_CODE");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { twoFactorEnabled: false, twoFactorSecret: null },
+  });
+
+  return { message: "2FA disabled successfully" };
 }
+
+
 
 // ────────────────────────────────────────────────
 // Get / Update Profile

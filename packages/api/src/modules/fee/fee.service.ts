@@ -1,6 +1,6 @@
 import { FeeStatus, PaymentMethod } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { ApiError } from "../../lib/ApiError";
+import { ApiError } from "../../utils/ApiError";
 
 
 

@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getSubscriptions, getSchools, type SubscriptionPlan, type School } from "@/services/mockApi";
+import { useMockApi, getSubscriptions, getSchools, type SubscriptionPlan, type School } from "@/services/apiClient";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 export default function SubscriptionsPage() {

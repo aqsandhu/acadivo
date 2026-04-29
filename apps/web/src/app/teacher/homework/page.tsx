@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { HomeworkItem, HomeworkSubmission } from "@/types";
 import { Plus, X, Download } from "lucide-react";
 

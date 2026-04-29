@@ -1,175 +1,133 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_dropdown.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/stats_card.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/parent_service.dart';
+import '../../services/api_service.dart';
+import '../../models/attendance_model.dart';
+import '../../models/student_model.dart';
 
 class ParentAttendanceScreen extends ConsumerStatefulWidget {
   const ParentAttendanceScreen({super.key});
-
   @override
   ConsumerState<ParentAttendanceScreen> createState() => _ParentAttendanceScreenState();
 }
 
 class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen> {
-  bool _isUrdu = false;
-  String? _selectedChild;
-  DateTime _focusedDay = DateTime.now();
+  bool _isLoading = true;
+  String? _error;
+  List<StudentModel> _children = [];
+  List<AttendanceModel> _attendance = [];
+  String? _selectedChildId;
 
-  final Map<DateTime, String> _attendance = {
-    DateTime(2024, 3, 1): 'present',
-    DateTime(2024, 3, 5): 'absent',
-    DateTime(2024, 3, 6): 'absent',
-    DateTime(2024, 3, 7): 'absent',
-    DateTime(2024, 3, 8): 'present',
-  };
+  @override
+  void initState() { super.initState(); _loadData(); }
 
-  Color _getDayColor(String? status) {
-    switch (status) {
-      case 'present': return const Color(0xFF10B981);
-      case 'absent': return const Color(0xFFEF4444);
-      case 'late': return const Color(0xFFF59E0B);
-      case 'leave': return const Color(0xFF3B82F6);
-      default: return Colors.transparent;
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = ParentService(api);
+      final children = await service.getMyChildren();
+      setState(() { _children = children; _isLoading = false; });
+      if (children.isNotEmpty) {
+        _selectedChildId = children.first.id;
+        _loadChildAttendance(children.first.id);
+      }
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
     }
   }
 
-  int get _consecutiveAbsences {
-    int maxStreak = 0;
-    int currentStreak = 0;
-    final sorted = _attendance.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
-    for (var entry in sorted) {
-      if (entry.value == 'absent') {
-        currentStreak++;
-        if (currentStreak > maxStreak) maxStreak = currentStreak;
-      } else {
-        currentStreak = 0;
-      }
+  Future<void> _loadChildAttendance(String childId) async {
+    setState(() => _isLoading = true);
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = ParentService(api);
+      final data = await service.getChildAttendance(childId);
+      setState(() { _attendance = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
     }
-    return maxStreak;
   }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'بچے کی حاضری' : 'Child Attendance',
-        isUrdu: _isUrdu,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          CustomDropdown<String>(
-            label: _isUrdu ? 'بچہ منتخب کریں' : 'Select Child',
-            value: _selectedChild,
-            items: const [
-              DropdownMenuItem(value: '1', child: Text('Ahmad Ali - Class 8-A')),
-              DropdownMenuItem(value: '2', child: Text('Fatima Ali - Class 5-B')),
-            ],
-            onChanged: (v) => setState(() => _selectedChild = v),
-          ),
-          const SizedBox(height: 20),
-          if (_consecutiveAbsences >= 3)
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEF4444).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning, color: Color(0xFFEF4444)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _isUrdu
-                          ? 'Alert: $_consecutiveAbsences لگاتار غیر حاضری!'
-                          : 'Alert: $_consecutiveAbsences consecutive absences!',
-                      style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: TableCalendar(
-                firstDay: DateTime(2024, 1, 1),
-                lastDay: DateTime(2024, 12, 31),
-                focusedDay: _focusedDay,
-                onPageChanged: (focused) => setState(() => _focusedDay = focused),
-                calendarStyle: CalendarStyle(
-                  cellMargin: const EdgeInsets.all(4),
-                ),
-                calendarBuilders: CalendarBuilders(
-                  defaultBuilder: (context, day, focusedDay) {
-                    final status = _attendance[DateTime(day.year, day.month, day.day)];
-                    if (status == null) return null;
-                    return Container(
-                      margin: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: _getDayColor(status).withOpacity(0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${day.day}',
-                          style: TextStyle(
-                            color: _getDayColor(status),
-                            fontWeight: FontWeight.bold,
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'حاضری' : 'Attendance',
+          isUrdu: isUrdu,
+        ),
+        body: _isLoading && _children.isEmpty
+            ? const Center(child: LoadingWidget())
+            : _error != null && _children.isEmpty
+                ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                : Column(
+                    children: [
+                      if (_children.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedChildId,
+                            decoration: InputDecoration(
+                              labelText: isUrdu ? 'بچہ منتخب کریں' : 'Select Child',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            items: _children.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                            onChanged: (val) { if (val != null) { setState(() => _selectedChildId = val); _loadChildAttendance(val); } },
                           ),
                         ),
+                      Expanded(
+                        child: _attendance.isEmpty
+                          ? EmptyStateWidget(
+                              icon: Icons.event_available_outlined,
+                              title: isUrdu ? 'کوئی حاضری نہیں' : 'No Attendance',
+                              subtitle: isUrdu ? 'اس بچے کی کوئی حاضری ریکارڈ نہیں' : 'No attendance records for this child.',
+                            )
+                          : RefreshIndicator(
+                              onRefresh: () => _loadChildAttendance(_selectedChildId!),
+                              child: ListView.builder(
+                                itemCount: _attendance.length,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                itemBuilder: (context, index) {
+                                  final a = _attendance[index];
+                                  return Card(
+                                    elevation: 0,
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    child: ListTile(
+                                      leading: Icon(
+                                        a.status == 'present' ? Icons.check_circle : a.status == 'absent' ? Icons.cancel : Icons.access_time,
+                                        color: a.status == 'present' ? Colors.green : a.status == 'absent' ? Colors.red : Colors.orange,
+                                      ),
+                                      title: Text(a.date != null ? '${a.date!.day}/${a.date!.month}/${a.date!.year}' : '', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                      subtitle: Text(a.subjectName ?? a.subjectId ?? ''),
+                                      trailing: StatusBadge(
+                                        label: a.status.toUpperCase(),
+                                        type: a.status == 'present' ? StatusType.success : a.status == 'absent' ? StatusType.error : StatusType.warning,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                       ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildRow(theme, 'Total Days', '22'),
-                  _buildRow(theme, 'Present', '18', color: const Color(0xFF10B981)),
-                  _buildRow(theme, 'Absent', '2', color: const Color(0xFFEF4444)),
-                  _buildRow(theme, 'Late', '1', color: const Color(0xFFF59E0B)),
-                  const Divider(),
-                  _buildRow(theme, 'Percentage', '90%', color: theme.colorScheme.primary),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRow(ThemeData theme, String label, String value, {Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: theme.textTheme.bodyMedium),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
+                    ],
+                  ),
       ),
     );
   }

@@ -1,6 +1,6 @@
 /**
- * Presence service for tracking online/offline user status
- * Uses Redis with TTL for automatic expiry
+ * Presence service with multi-device tracking
+ * Uses Redis with device counter for accurate online status
  */
 
 import { Server } from "socket.io";
@@ -13,16 +13,22 @@ import { logger } from "../utils/logger";
 const PRESENCE_KEY_PREFIX = "presence:";
 const ONLINE_SET_KEY = (tenantId: string) => `${PRESENCE_KEY_PREFIX}online:${tenantId}`;
 const USER_STATUS_KEY = (userId: string) => `${PRESENCE_KEY_PREFIX}user:${userId}`;
+const USER_DEVICES_KEY = (userId: string) => `${PRESENCE_KEY_PREFIX}devices:${userId}`;
 
-export async function setOnline(userId: string, tenantId: string): Promise<void> {
+export async function setOnline(userId: string, tenantId: string, deviceId?: string): Promise<void> {
   const pipeline = redisClient.pipeline();
   const now = new Date().toISOString();
+  const device = deviceId || "default";
 
-  // Add to tenant's online set with TTL
+  // Increment device counter for multi-device tracking
+  pipeline.hincrby(USER_DEVICES_KEY(userId), device, 1);
+  pipeline.expire(USER_DEVICES_KEY(userId), env.PRESENCE_TTL_SECONDS);
+
+  // Add to tenant's online set
   pipeline.sadd(ONLINE_SET_KEY(tenantId), userId);
   pipeline.expire(ONLINE_SET_KEY(tenantId), env.PRESENCE_TTL_SECONDS);
 
-  // Set user status with TTL
+  // Set user status
   pipeline.setex(
     USER_STATUS_KEY(userId),
     env.PRESENCE_TTL_SECONDS,
@@ -30,25 +36,37 @@ export async function setOnline(userId: string, tenantId: string): Promise<void>
   );
 
   await pipeline.exec();
-  logger.debug(`User ${userId} set as online in tenant ${tenantId}`);
+  logger.debug(`User ${userId} set as online (device: ${device}) in tenant ${tenantId}`);
 }
 
-export async function setOffline(userId: string, tenantId: string): Promise<void> {
+export async function setOffline(userId: string, tenantId: string, deviceId?: string): Promise<void> {
   const pipeline = redisClient.pipeline();
   const now = new Date().toISOString();
+  const device = deviceId || "default";
 
-  // Remove from tenant's online set
-  pipeline.srem(ONLINE_SET_KEY(tenantId), userId);
+  // Decrement device counter
+  pipeline.hincrby(USER_DEVICES_KEY(userId), device, -1);
 
-  // Update user status
-  pipeline.setex(
-    USER_STATUS_KEY(userId),
-    env.PRESENCE_TTL_SECONDS,
-    JSON.stringify({ tenantId, status: "offline", lastSeen: now })
-  );
+  // Check if any devices remain for this user
+  const devices = await redisClient.hgetall(USER_DEVICES_KEY(userId));
+  const totalDevices = Object.values(devices).reduce((sum, count) => sum + parseInt(count, 10), 0);
+
+  // Only mark offline if no devices remain
+  if (totalDevices <= 1) {
+    pipeline.del(USER_DEVICES_KEY(userId));
+    pipeline.srem(ONLINE_SET_KEY(tenantId), userId);
+    pipeline.setex(
+      USER_STATUS_KEY(userId),
+      env.PRESENCE_TTL_SECONDS,
+      JSON.stringify({ tenantId, status: "offline", lastSeen: now })
+    );
+    logger.debug(`User ${userId} fully offline in tenant ${tenantId}`);
+  } else {
+    pipeline.expire(USER_DEVICES_KEY(userId), env.PRESENCE_TTL_SECONDS);
+    logger.debug(`User ${userId} disconnected device ${device}, still online (${totalDevices - 1} devices)`);
+  }
 
   await pipeline.exec();
-  logger.debug(`User ${userId} set as offline in tenant ${tenantId}`);
 }
 
 export async function getOnlineUsers(tenantId: string): Promise<string[]> {
@@ -58,6 +76,16 @@ export async function getOnlineUsers(tenantId: string): Promise<string[]> {
   } catch (error) {
     logger.error("Error fetching online users:", error);
     return [];
+  }
+}
+
+export async function getUserDeviceCount(userId: string): Promise<number> {
+  try {
+    const devices = await redisClient.hgetall(USER_DEVICES_KEY(userId));
+    return Object.values(devices).reduce((sum, count) => sum + parseInt(count, 10), 0);
+  } catch (error) {
+    logger.error("Error fetching device count:", error);
+    return 0;
   }
 }
 
@@ -89,6 +117,7 @@ export async function refreshOnlineStatus(userId: string, tenantId: string): Pro
   const pipeline = redisClient.pipeline();
   pipeline.expire(ONLINE_SET_KEY(tenantId), env.PRESENCE_TTL_SECONDS);
   pipeline.expire(USER_STATUS_KEY(userId), env.PRESENCE_TTL_SECONDS);
+  pipeline.expire(USER_DEVICES_KEY(userId), env.PRESENCE_TTL_SECONDS);
   await pipeline.exec();
 }
 

@@ -1,122 +1,104 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
-import '../../widgets/custom_dropdown.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/communication_service.dart';
+import '../../services/api_service.dart';
+import '../../models/notification_model.dart';
 
 class TeacherNotificationsScreen extends ConsumerStatefulWidget {
   const TeacherNotificationsScreen({super.key});
-
   @override
   ConsumerState<TeacherNotificationsScreen> createState() => _TeacherNotificationsScreenState();
 }
 
 class _TeacherNotificationsScreenState extends ConsumerState<TeacherNotificationsScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _bodyController = TextEditingController();
-  String _target = 'class';
-  String? _selectedStudent;
-  String? _selectedParent;
-  bool _isLoading = false;
-  bool _isUrdu = false;
+  bool _isLoading = true;
+  String? _error;
+  List<NotificationModel> _notifications = [];
 
-  Future<void> _sendNotification() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() => _isLoading = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isUrdu ? 'اطلاع بھیج دی گئی' : 'Notification sent successfully')),
-      );
+  @override
+  void initState() { super.initState(); _loadData(); }
+
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = CommunicationService(api);
+      final data = await service.getNotifications();
+      setState(() { _notifications = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
     }
+  }
+
+  Future<void> _markRead(String id) async {
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = CommunicationService(api);
+      await service.markNotificationRead(id);
+      setState(() {
+        _notifications = _notifications.map((n) => n.id == id ? n.copyWith(isRead: true) : n).toList();
+      });
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'اطلاع بھیجیں' : 'Send Notification',
-        isUrdu: _isUrdu,
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            CustomTextField(
-              label: _isUrdu ? 'عنوان' : 'Title',
-              controller: _titleController,
-              validator: (v) => v == null || v.isEmpty ? (_isUrdu ? 'عنوان درج کریں' : 'Enter title') : null,
-            ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              label: _isUrdu ? 'پیغام' : 'Message',
-              controller: _bodyController,
-              maxLines: 4,
-              validator: (v) => v == null || v.isEmpty ? (_isUrdu ? 'پیغام درج کریں' : 'Enter message') : null,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _isUrdu ? 'حصول' : 'Target',
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            RadioListTile<String>(
-              title: Text(_isUrdu ? 'میری کلاس' : 'My Class'),
-              value: 'class',
-              groupValue: _target,
-              onChanged: (v) => setState(() => _target = v!),
-            ),
-            RadioListTile<String>(
-              title: Text(_isUrdu ? 'خصوصی طالب علم' : 'Specific Student'),
-              value: 'student',
-              groupValue: _target,
-              onChanged: (v) => setState(() => _target = v!),
-            ),
-            RadioListTile<String>(
-              title: Text(_isUrdu ? 'خصوصی والدین' : 'Specific Parent'),
-              value: 'parent',
-              groupValue: _target,
-              onChanged: (v) => setState(() => _target = v!),
-            ),
-            if (_target == 'student') ...[
-              const SizedBox(height: 16),
-              CustomDropdown<String>(
-                label: _isUrdu ? 'طالب علم منتخب کریں' : 'Select Student',
-                value: _selectedStudent,
-                items: const [
-                  DropdownMenuItem(value: '1', child: Text('Ahmad Ali')),
-                  DropdownMenuItem(value: '2', child: Text('Bilal Khan')),
-                  DropdownMenuItem(value: '3', child: Text('Fatima Zahra')),
-                ],
-                onChanged: (v) => setState(() => _selectedStudent = v),
-              ),
-            ],
-            if (_target == 'parent') ...[
-              const SizedBox(height: 16),
-              CustomDropdown<String>(
-                label: _isUrdu ? 'والدین منتخب کریں' : 'Select Parent',
-                value: _selectedParent,
-                items: const [
-                  DropdownMenuItem(value: '1', child: Text('Mr. Ahmed (Ahmad's Father)')),
-                  DropdownMenuItem(value: '2', child: Text('Mrs. Khan (Bilal's Mother)')),
-                ],
-                onChanged: (v) => setState(() => _selectedParent = v),
-              ),
-            ],
-            const SizedBox(height: 24),
-            CustomButton(
-              label: _isUrdu ? 'بھیجیں' : 'Send',
-              isLoading: _isLoading,
-              onPressed: _sendNotification,
-            ),
-            const SizedBox(height: 32),
-          ],
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'نوٹیفیکیشنز' : 'Notifications',
+          isUrdu: isUrdu,
         ),
+        body: _isLoading && _notifications.isEmpty
+            ? const Center(child: LoadingWidget())
+            : _error != null && _notifications.isEmpty
+                ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                : _notifications.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.notifications_none_outlined,
+                        title: isUrdu ? 'کوئی نوٹیفیکیشن نہیں' : 'No Notifications',
+                        subtitle: isUrdu ? 'ابھی تک کوئی نوٹیفیکیشن نہیں' : 'No notifications yet.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ListView.builder(
+                          itemCount: _notifications.length,
+                          padding: const EdgeInsets.all(16),
+                          itemBuilder: (context, index) {
+                            final n = _notifications[index];
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              color: n.isRead ? null : theme.colorScheme.primaryContainer.withOpacity(0.1),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                leading: Icon(
+                                  n.isRead ? Icons.notifications_outlined : Icons.notifications_active,
+                                  color: n.isRead ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary,
+                                ),
+                                title: Text(n.title, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: n.isRead ? FontWeight.normal : FontWeight.w600)),
+                                subtitle: Text(n.body, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                trailing: Text(n.createdAt != null ? '${n.createdAt!.day}/${n.createdAt!.month}' : '', style: theme.textTheme.bodySmall),
+                                onTap: () => _markRead(n.id),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
       ),
     );
   }

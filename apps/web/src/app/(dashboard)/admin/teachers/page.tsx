@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useMockApi, getTeachers, createTeacher, updateTeacher, deleteTeacher, type Teacher } from "@/services/mockApi";
+import { useMockApi, getTeachers, createTeacher, updateTeacher, deleteTeacher, type Teacher } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 

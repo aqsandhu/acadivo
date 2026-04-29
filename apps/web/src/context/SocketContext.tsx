@@ -27,14 +27,26 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
-  const connect = useCallback(() => {
+const connect = useCallback(() => {
     if (socket?.connected) return;
+
+    let token: string | undefined;
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("acadivo-tokens");
+      if (raw) {
+        try {
+          const tokens = JSON.parse(raw);
+          token = tokens.accessToken;
+        } catch { /* ignore */ }
+      }
+    }
 
     const newSocket = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      auth: token ? { token } : undefined,
     });
 
     newSocket.on("connect", () => {

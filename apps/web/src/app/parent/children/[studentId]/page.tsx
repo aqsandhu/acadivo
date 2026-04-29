@@ -12,7 +12,7 @@ import { FeeRecordCard } from "@/components/dashboard/FeeRecordCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { ChildProfile, AttendanceRecord, HomeworkItem, ResultItem, FeeRecord, ReportRequest } from "@/types";
 import { GraduationCap, Hash, TrendingUp, BookOpen, CreditCard } from "lucide-react";
 

@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { ReportRequest, ChildProfile } from "@/types";
 import { FileBadge, Download } from "lucide-react";
 
@@ -27,6 +27,22 @@ export default function ParentReportsPage() {
     load();
   }, []);
 
+  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    async function load() {
+      const [r, c] = await Promise.all([mockApi.getReportRequests(), mockApi.getChildren()]);
+      setRequests(r);
+      setChildren(c);
+      // Extract unique teachers from requests instead of hardcoding
+      const teacherMap = new Map<string, string>();
+      r.forEach((req: any) => { if (req.teacherId && req.teacherName) teacherMap.set(req.teacherId, req.teacherName); });
+      setTeachers(Array.from(teacherMap.entries()).map(([id, name]) => ({ id, name })));
+      setLoading(false);
+    }
+    load();
+  }, []);
+
   const handleRequest = async (data: any) => {
     await mockApi.createReportRequest(data);
     alert("Report request submitted!");
@@ -40,7 +56,7 @@ export default function ParentReportsPage() {
           <h1 className="text-2xl font-bold">Report Requests</h1>
           <ReportRequestForm
             children={children.map((c) => ({ id: c.id, name: c.name }))}
-            teachers={[{ id: "TCH-001", name: "Ahmed Hassan" }]}
+            teachers={teachers.length > 0 ? teachers : [{ id: "", name: "No teachers available" }]}
             onSubmit={handleRequest}
           />
           <h2 className="text-lg font-semibold">My Requests</h2>

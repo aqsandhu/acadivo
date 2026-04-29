@@ -1,46 +1,42 @@
 /**
  * Socket.io real-time server main entry for Acadivo
- * 
+ *
  * Features:
  * - Socket.io server on port 5001
  * - CORS for web app + mobile origins
  * - Redis adapter for multi-node scaling
  * - JWT authentication middleware
+ * - Input validation with XSS sanitization
+ * - Rate limiting with Redis
+ * - Cross-tenant validation
+ * - Multi-device presence tracking
  * - Connection/disconnection logging
- * - Health check endpoint
+ * - Health check endpoints (with proper Redis adapter)
+ * - FCM token management
+ * - State recovery after reconnection
  */
 
 import { createServer } from "http";
+import express from "express";
 import { Server } from "socket.io";
 import { env } from "./config/env";
-import { connectRedis, disconnectRedis, getRedisAdapter } from "./config/redis";
+import { connectRedis, disconnectRedis } from "./config/redis";
+import { createRedisAdapter, registerHealthChecks } from "./health";
 import { registerConnectionHandlers } from "./handlers/connection.handler";
 import { registerMessageHandlers } from "./handlers/message.handler";
 import { registerNotificationHandlers } from "./handlers/notification.handler";
 import { registerRoomHandlers } from "./handlers/room.handler";
+import { registerPresenceHandlers } from "./handlers/presence.handler";
+import { registerFcmHandlers } from "./handlers/fcm.handler";
+import { registerConversationHandlers } from "./handlers/conversation.handler";
 import { logger } from "./utils/logger";
 
 const PORT = env.PORT;
 
-const httpServer = createServer((req, res) => {
-  // Health check endpoint
-  if (req.url === "/health" && req.method === "GET") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
-        status: "ok",
-        service: "acadivo-socket",
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-      })
-    );
-    return;
-  }
+const app = express();
+app.disable("x-powered-by");
 
-  // Default response
-  res.writeHead(404, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ status: "not_found" }));
-});
+const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
@@ -57,10 +53,13 @@ async function startServer(): Promise<void> {
   try {
     // Connect Redis clients and setup adapter
     await connectRedis();
-    io.adapter(getRedisAdapter());
+    io.adapter(createRedisAdapter());
     logger.info("Redis adapter attached to Socket.io");
 
-    // Register global connection handlers (includes auth middleware)
+    // Register health check endpoints (before socket middleware)
+    registerHealthChecks(io, app);
+
+    // Register global connection handlers (includes auth + validation middleware)
     registerConnectionHandlers(io);
 
     // Register per-socket handlers after connection
@@ -68,13 +67,16 @@ async function startServer(): Promise<void> {
       registerMessageHandlers(io, socket);
       registerNotificationHandlers(socket);
       registerRoomHandlers(socket);
+      registerPresenceHandlers(io, socket);
+      registerFcmHandlers(socket);
+      registerConversationHandlers(socket);
     });
 
     httpServer.listen(PORT, () => {
-      logger.info(`⚡ Acadivo Socket.io server running on http://localhost:${PORT}`);
-      logger.info(`📝 Health check available at http://localhost:${PORT}/health`);
-      logger.info(`🌐 CORS origins: ${env.CORS_ORIGINS.join(", ")}`);
-      logger.info(`🔌 Redis adapter active for multi-node scaling`);
+      logger.info(`Acadivo Socket.io server running on http://localhost:${PORT}`);
+      logger.info(`Health check available at http://localhost:${PORT}/health`);
+      logger.info(`CORS origins: ${env.CORS_ORIGINS.join(", ")}`);
+      logger.info(`Redis adapter active for multi-node scaling`);
     });
   } catch (error) {
     logger.error("Failed to start server:", error);

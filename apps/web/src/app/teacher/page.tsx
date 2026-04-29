@@ -7,7 +7,7 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ClassCard } from "@/components/dashboard/ClassCard";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import { useTranslation } from "react-i18next";
 import type { ClassItem, Announcement } from "@/types";
 import { BookOpen, ClipboardCheck, MessageSquare, FileBadge, Bell } from "lucide-react";

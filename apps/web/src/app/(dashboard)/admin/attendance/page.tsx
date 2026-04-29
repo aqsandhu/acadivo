@@ -11,7 +11,7 @@ import { Select, SelectOption } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getAttendance, getStudents, type AttendanceRecord } from "@/services/mockApi";
+import { useMockApi, getAttendance, getStudents, type AttendanceRecord } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 

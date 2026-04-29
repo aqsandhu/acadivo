@@ -1,12 +1,13 @@
 /**
  * Firebase Cloud Messaging (FCM) push notification service
- * Handles device token management and push delivery
+ * Handles device token management, push delivery, and token cleanup
  */
 
 import admin from "firebase-admin";
 import { env } from "../config/env";
 import { NotificationPayload } from "../types/socket";
-import { getDeviceTokens, getDeviceTokensBulk } from "./api.service";
+import { getDeviceTokens, getDeviceTokensBulk, removeDeviceToken } from "./api.service";
+import { redisClient } from "../config/redis";
 import { logger } from "../utils/logger";
 
 let firebaseInitialized = false;
@@ -34,6 +35,57 @@ function initializeFirebase(): void {
 }
 
 initializeFirebase();
+
+const FCM_TOKEN_KEY = (userId: string) => `fcm:tokens:${userId}`;
+
+/**
+ * Register an FCM token for a user (with Redis caching)
+ */
+export async function registerFcmToken(userId: string, token: string, deviceInfo?: string): Promise<void> {
+  try {
+    await redisClient.hset(FCM_TOKEN_KEY(userId), token, JSON.stringify({
+      deviceInfo: deviceInfo || "unknown",
+      registeredAt: new Date().toISOString(),
+    }));
+    await redisClient.expire(FCM_TOKEN_KEY(userId), 60 * 60 * 24 * 30); // 30 days
+    logger.info(`FCM token registered for user ${userId}`);
+  } catch (error) {
+    logger.error(`Error registering FCM token for user ${userId}:`, error);
+  }
+}
+
+/**
+ * Unregister an FCM token for a user
+ */
+export async function unregisterFcmToken(userId: string, token: string): Promise<void> {
+  try {
+    await redisClient.hdel(FCM_TOKEN_KEY(userId), token);
+    logger.info(`FCM token unregistered for user ${userId}`);
+  } catch (error) {
+    logger.error(`Error unregistering FCM token for user ${userId}:`, error);
+  }
+}
+
+/**
+ * Cleanup invalid FCM tokens from Redis and API
+ */
+export async function cleanupInvalidTokens(userId: string, invalidTokens: string[]): Promise<void> {
+  try {
+    const pipeline = redisClient.pipeline();
+    for (const token of invalidTokens) {
+      pipeline.hdel(FCM_TOKEN_KEY(userId), token);
+    }
+    await pipeline.exec();
+
+    // Also remove from API database
+    for (const token of invalidTokens) {
+      await removeDeviceToken(userId, token);
+    }
+    logger.info(`Cleaned up ${invalidTokens.length} invalid FCM tokens for user ${userId}`);
+  } catch (error) {
+    logger.error(`Error cleaning up FCM tokens for user ${userId}:`, error);
+  }
+}
 
 export async function sendPushToUser(
   userId: string,
@@ -73,6 +125,7 @@ export async function sendPushToUser(
     );
 
     // Handle invalid tokens
+    const invalidTokens: string[] = [];
     response.responses.forEach((resp, idx) => {
       if (!resp.success) {
         const error = resp.error;
@@ -80,11 +133,14 @@ export async function sendPushToUser(
           error?.code === "messaging/invalid-registration-token" ||
           error?.code === "messaging/registration-token-not-registered"
         ) {
-          logger.warn(`Invalid FCM token for user ${userId}: ${tokens[idx]}`);
-          // Optionally call API to remove token
+          invalidTokens.push(tokens[idx]);
         }
       }
     });
+
+    if (invalidTokens.length > 0) {
+      await cleanupInvalidTokens(userId, invalidTokens);
+    }
   } catch (error) {
     logger.error(`Error sending push to user ${userId}:`, error);
   }

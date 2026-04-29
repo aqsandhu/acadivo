@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { BarChart3, TrendingUp, Users, School, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockApi, getDashboardStats, getSchools } from "@/services/mockApi";
+import { useMockApi, getDashboardStats, getSchools } from "@/services/apiClient";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, AreaChart, Area,

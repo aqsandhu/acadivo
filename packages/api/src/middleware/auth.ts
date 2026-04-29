@@ -17,6 +17,29 @@ declare global {
 }
 
 /**
+ * Main authentication middleware.
+ * Extracts Bearer token from Authorization header, verifies JWT,
+ * and attaches decoded payload to req.user.
+ */
+export function authMiddleware(req: Request, _res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return next(ApiError.unauthorized("Access token required", "AUTH_NO_TOKEN"));
+  }
+
+  const token = authHeader.substring(7); // Remove "Bearer " prefix
+
+  try {
+    const decoded = verifyToken(token, "access");
+    req.user = decoded as any;
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * Alias for authMiddleware for route-level use.
  */
 export const authenticate = authMiddleware;
@@ -34,4 +57,21 @@ export function authorize(...allowedRoles: string[]) {
     }
     next();
   };
+}
+
+/**
+ * Require specific role guards (re-exported from RBAC for convenience).
+ */
+export const requireSuperAdmin = authorize("SUPER_ADMIN");
+export const requireAdmin = authorize("ADMIN", "SUPER_ADMIN");
+export const requirePrincipal = authorize("PRINCIPAL", "SUPER_ADMIN");
+export const requireTeacher = authorize("TEACHER", "PRINCIPAL", "ADMIN", "SUPER_ADMIN");
+export const requireStudent = authorize("STUDENT", "SUPER_ADMIN");
+export const requireParent = authorize("PARENT", "SUPER_ADMIN");
+
+/**
+ * AuthRequest type alias for controllers.
+ */
+export interface AuthRequest extends Request {
+  user: TokenPayload & { userId: string; role: string; tenantId: string | null; uniqueId: string };
 }

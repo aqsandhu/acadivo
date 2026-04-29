@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { StudentSidebar } from "@/components/layout/StudentSidebar";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { MessageThreadList } from "@/components/dashboard/MessageThreadList";
 import { ChatInterface } from "@/components/dashboard/ChatInterface";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { Conversation, MessageItem } from "@/types";
 import { Plus } from "lucide-react";
 
 export default function StudentMessagesPage() {
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
@@ -50,7 +52,7 @@ export default function StudentMessagesPage() {
             </div>
             <div className="lg:col-span-2">
               {activeConv ? (
-                <ChatInterface conversation={activeConv} messages={messages} onSendMessage={sendMessage} currentUserId="STD-001" />
+                <ChatInterface conversation={activeConv} messages={messages} onSendMessage={sendMessage} currentUserId={user?.id || ""} />
               ) : (
                 <div className="h-[600px] flex items-center justify-center text-muted-foreground border rounded-xl bg-muted/30">
                   Select a conversation to start chatting
