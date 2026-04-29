@@ -713,3 +713,271 @@ resource "aws_cloudfront_distribution" "main" {
     Name = "acadivo-${var.environment}-cdn"
   }
 }
+
+
+# ===================================================================
+# ECS Task Definitions
+# ===================================================================
+resource "aws_ecs_task_definition" "api" {
+  family                   = "acadivo-${var.environment}-api"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "512"
+  memory                   = "1024"
+  execution_role_arn       = aws_iam_role.ecs_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([{
+    name  = "api"
+    image = var.api_image
+    essential = true
+    portMappings = [{
+      containerPort = 5000
+      protocol      = "tcp"
+    }]
+    environment = [
+      { name = "NODE_ENV", value = var.environment },
+      { name = "PORT", value = "5000" },
+      { name = "DATABASE_URL", value = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/${var.db_name}" },
+      { name = "REDIS_URL", value = "redis://${aws_elasticache_cluster.main.cache_nodes[0].address}:6379" },
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.ecs.name
+        awslogs-region        = var.aws_region
+        awslogs-stream-prefix = "api"
+      }
+    }
+    healthCheck = {
+      command     = ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:5000/health || exit 1"]
+      interval    = 30
+      timeout     = 5
+      retries     = 3
+      startPeriod = 60
+    }
+  }])
+
+  tags = {
+    Name = "acadivo-${var.environment}-api-task"
+  }
+}
+
+resource "aws_ecs_task_definition" "web" {
+  family                   = "acadivo-${var.environment}-web"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([{
+    name  = "web"
+    image = var.web_image
+    essential = true
+    portMappings = [{
+      containerPort = 3000
+      protocol      = "tcp"
+    }]
+    environment = [
+      { name = "NODE_ENV", value = var.environment },
+      { name = "NEXT_PUBLIC_API_URL", value = "https://${var.domain_name}/api" },
+      { name = "NEXT_PUBLIC_SOCKET_URL", value = "https://${var.domain_name}" },
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.ecs.name
+        awslogs-region        = var.aws_region
+        awslogs-stream-prefix = "web"
+      }
+    }
+  }])
+
+  tags = {
+    Name = "acadivo-${var.environment}-web-task"
+  }
+}
+
+resource "aws_ecs_task_definition" "socket" {
+  family                   = "acadivo-${var.environment}-socket"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([{
+    name  = "socket"
+    image = var.socket_image
+    essential = true
+    portMappings = [{
+      containerPort = 5001
+      protocol      = "tcp"
+    }]
+    environment = [
+      { name = "NODE_ENV", value = var.environment },
+      { name = "PORT", value = "5001" },
+      { name = "REDIS_URL", value = "redis://${aws_elasticache_cluster.main.cache_nodes[0].address}:6379" },
+      { name = "CORS_ORIGINS", value = jsonencode(["https://${var.domain_name}", "https://www.${var.domain_name}"]) },
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.ecs.name
+        awslogs-region        = var.aws_region
+        awslogs-stream-prefix = "socket"
+      }
+    }
+    healthCheck = {
+      command     = ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:5001/health || exit 1"]
+      interval    = 30
+      timeout     = 5
+      retries     = 3
+      startPeriod = 60
+    }
+  }])
+
+  tags = {
+    Name = "acadivo-${var.environment}-socket-task"
+  }
+}
+
+# ===================================================================
+# ECS Services
+# ===================================================================
+resource "aws_ecs_service" "api" {
+  name            = "acadivo-${var.environment}-api"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.api.arn
+  desired_count   = var.api_desired_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = aws_subnet.private[*].id
+    security_groups  = [aws_security_group.ecs_tasks.id]
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.api.arn
+    container_name   = "api"
+    container_port   = 5000
+  }
+
+  deployment_configuration {
+    maximum_percent         = 200
+    minimum_healthy_percent = 100
+  }
+
+  tags = {
+    Name = "acadivo-${var.environment}-api-service"
+  }
+}
+
+resource "aws_ecs_service" "web" {
+  name            = "acadivo-${var.environment}-web"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.web.arn
+  desired_count   = var.web_desired_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = aws_subnet.private[*].id
+    security_groups  = [aws_security_group.ecs_tasks.id]
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.web.arn
+    container_name   = "web"
+    container_port   = 3000
+  }
+
+  deployment_configuration {
+    maximum_percent         = 200
+    minimum_healthy_percent = 100
+  }
+
+  tags = {
+    Name = "acadivo-${var.environment}-web-service"
+  }
+}
+
+resource "aws_ecs_service" "socket" {
+  name            = "acadivo-${var.environment}-socket"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.socket.arn
+  desired_count   = var.socket_desired_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = aws_subnet.private[*].id
+    security_groups  = [aws_security_group.ecs_tasks.id]
+    assign_public_ip = false
+  }
+
+  deployment_configuration {
+    maximum_percent         = 200
+    minimum_healthy_percent = 100
+  }
+
+  tags = {
+    Name = "acadivo-${var.environment}-socket-service"
+  }
+}
+
+# ===================================================================
+# Auto Scaling Policies
+# ===================================================================
+resource "aws_appautoscaling_target" "api" {
+  max_capacity       = 6
+  min_capacity       = 2
+  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.api.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+resource "aws_appautoscaling_policy" "api_cpu" {
+  name               = "acadivo-${var.environment}-api-cpu"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.api.resource_id
+  scalable_dimension = aws_appautoscaling_target.api.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.api.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value       = 70.0
+    scale_in_cooldown  = 300
+    scale_out_cooldown = 60
+  }
+}
+
+resource "aws_appautoscaling_target" "web" {
+  max_capacity       = 4
+  min_capacity       = 2
+  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.web.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+resource "aws_appautoscaling_policy" "web_cpu" {
+  name               = "acadivo-${var.environment}-web-cpu"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.web.resource_id
+  scalable_dimension = aws_appautoscaling_target.web.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.web.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value       = 70.0
+    scale_in_cooldown  = 300
+    scale_out_cooldown = 60
+  }
+}

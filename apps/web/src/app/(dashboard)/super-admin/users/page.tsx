@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useMockApi, getUsers, type User } from "@/services/mockApi";
+import { useMockApi, getUsers, type User } from "@/services/apiClient";
 
 export default function UsersPage() {
   const { t } = useTranslation();

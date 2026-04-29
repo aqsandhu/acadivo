@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getFeeRecords, getStudents } from "@/services/mockApi";
+import { useMockApi, getFeeRecords, getStudents } from "@/services/apiClient";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 export default function PrincipalFeePage() {

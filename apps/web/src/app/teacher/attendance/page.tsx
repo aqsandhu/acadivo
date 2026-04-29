@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { AttendanceRecord } from "@/types";
 import { cn } from "@/utils/cn";
 import { CheckCircle2, XCircle, Clock, ArrowRightCircle } from "lucide-react";

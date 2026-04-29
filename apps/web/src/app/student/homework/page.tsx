@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { HomeworkItem, HomeworkSubmission } from "@/types";
 import { Upload, X, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";

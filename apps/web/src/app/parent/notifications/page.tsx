@@ -5,7 +5,7 @@ import { ParentSidebar } from "@/components/layout/ParentSidebar";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { NotificationList } from "@/components/dashboard/NotificationList";
 import { Button } from "@/components/ui/button";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { NotificationItem } from "@/types";
 
 export default function ParentNotificationsPage() {

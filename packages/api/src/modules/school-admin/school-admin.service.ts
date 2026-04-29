@@ -2,10 +2,10 @@
 // School Admin Service
 // ═══════════════════════════════════════════════════
 
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../../config/database';
 import { generateUniqueId } from '../../services/user.service';
-
-const prisma = new PrismaClient();
+import { hashPassword } from '../../utils/password';
 
 // ── Dashboard Stats ──
 
@@ -48,13 +48,14 @@ export async function getDashboardStats(tenantId: string) {
 
 export async function createTeacher(tenantId: string, schoolCode: string, data: any) {
   const uniqueId = await generateUniqueId(prisma, 'TEACHER', tenantId, schoolCode);
+  const passwordHash = await hashPassword(data.password);
 
   return prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
         uniqueId,
         email: data.email,
-        passwordHash: data.password, // should be hashed before calling
+        passwordHash,
         role: 'TEACHER',
         tenantId,
         firstName: data.firstName,
@@ -176,13 +177,14 @@ export async function deactivateTeacher(tenantId: string, id: string) {
 
 export async function createStudent(tenantId: string, schoolCode: string, data: any) {
   const uniqueId = await generateUniqueId(prisma, 'STUDENT', tenantId, schoolCode);
+  const passwordHash = await hashPassword(data.password);
 
   return prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
         uniqueId,
         email: data.email,
-        passwordHash: data.password,
+        passwordHash,
         role: 'STUDENT',
         tenantId,
         firstName: data.firstName,
@@ -323,13 +325,14 @@ export async function deactivateStudent(tenantId: string, id: string) {
 
 export async function createParent(tenantId: string, schoolCode: string, data: any) {
   const uniqueId = await generateUniqueId(prisma, 'PARENT', tenantId, schoolCode);
+  const passwordHash = await hashPassword(data.password);
 
   return prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
         uniqueId,
         email: data.email,
-        passwordHash: data.password,
+        passwordHash,
         role: 'PARENT',
         tenantId,
         firstName: data.firstName,

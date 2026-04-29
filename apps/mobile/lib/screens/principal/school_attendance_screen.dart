@@ -1,112 +1,107 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_dropdown.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
 import '../../widgets/stats_card.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/principal_service.dart';
+import '../../services/api_service.dart';
+import '../../models/attendance_model.dart';
 
 class SchoolAttendanceScreen extends ConsumerStatefulWidget {
   const SchoolAttendanceScreen({super.key});
-
   @override
   ConsumerState<SchoolAttendanceScreen> createState() => _SchoolAttendanceScreenState();
 }
 
 class _SchoolAttendanceScreenState extends ConsumerState<SchoolAttendanceScreen> {
-  bool _isUrdu = false;
-  String? _selectedClass;
+  bool _isLoading = true;
+  String? _error;
+  DateTime _selectedDate = DateTime.now();
+  Map<String, dynamic> _overview = {};
 
-  final List<Map<String, dynamic>> _summary = [
-    {'class': '8-A', 'present': 30, 'absent': 2, 'late': 0},
-    {'class': '9-B', 'present': 28, 'absent': 1, 'late': 1},
-    {'class': '10-C', 'present': 32, 'absent': 0, 'late': 0},
-  ];
+  @override
+  void initState() { super.initState(); _loadData(); }
+
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = PrincipalService(api);
+      final data = await service.getAttendanceOverview(date: _selectedDate);
+      setState(() { _overview = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final date = await showDatePicker(context: context, initialDate: _selectedDate, firstDate: DateTime(2020), lastDate: DateTime.now());
+    if (date != null) { setState(() => _selectedDate = date); _loadData(); }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'اسکول کی حاضری' : 'School Attendance',
-        isUrdu: _isUrdu,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: CustomDropdown<String>(
-              label: _isUrdu ? 'کلاس' : 'Class',
-              value: _selectedClass,
-              items: const [
-                DropdownMenuItem(value: null, child: Text('All Classes')),
-                DropdownMenuItem(value: '8', child: Text('Class 8')),
-                DropdownMenuItem(value: '9', child: Text('Class 9')),
-                DropdownMenuItem(value: '10', child: Text('Class 10')),
-              ],
-              onChanged: (v) => setState(() => _selectedClass = v),
-            ),
-          ),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
-            childAspectRatio: 1.5,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            children: const [
-              StatsCard(icon: Icons.event_available, value: '822', label: 'Present', color: Color(0xFF10B981)),
-              StatsCard(icon: Icons.event_busy, value: '28', label: 'Absent', color: Color(0xFFEF4444)),
-              StatsCard(icon: Icons.access_time, value: '12', label: 'Late', color: Color(0xFFF59E0B)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(
-            _isUrdu ? 'کلاس وار خلاصہ' : 'Class-wise Summary',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          ..._summary.map((s) => Card(
-            elevation: 0,
-            margin: const EdgeInsets.only(bottom: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(s['class'], style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildMiniStat('Present', s['present'].toString(), const Color(0xFF10B981)),
-                      _buildMiniStat('Absent', s['absent'].toString(), const Color(0xFFEF4444)),
-                      _buildMiniStat('Late', s['late'].toString(), const Color(0xFFF59E0B)),
-                    ],
+    final present = _overview['present'] ?? 0;
+    final absent = _overview['absent'] ?? 0;
+    final late = _overview['late'] ?? 0;
+    final total = _overview['total'] ?? 1;
+    final percentage = total > 0 ? ((present / total) * 100).toStringAsFixed(1) : '0.0';
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'اسکول کی حاضری' : 'School Attendance',
+          isUrdu: isUrdu,
+        ),
+        body: _isLoading && _overview.isEmpty
+            ? const Center(child: LoadingWidget())
+            : _error != null && _overview.isEmpty
+                ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                : RefreshIndicator(
+                    onRefresh: _loadData,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.calendar_today),
+                            title: Text(isUrdu ? 'تاریخ منتخب کریں' : 'Select Date'),
+                            subtitle: Text('${_selectedDate.toLocal()}'.split(' ')[0]),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _pickDate,
+                          ),
+                          const SizedBox(height: 16),
+                          GridView.count(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: MediaQuery.of(context).size.width > 600 ? 4 : 2,
+                            childAspectRatio: 1.2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            children: [
+                              StatsCard(icon: Icons.event_available, value: '$present', label: isUrdu ? 'حاضر' : 'Present', color: const Color(0xFF10B981)),
+                              StatsCard(icon: Icons.person_off, value: '$absent', label: isUrdu ? 'غیر حاضر' : 'Absent', color: const Color(0xFFEF4444)),
+                              StatsCard(icon: Icons.access_time, value: '$late', label: isUrdu ? 'تاخیر' : 'Late', color: const Color(0xFFF59E0B)),
+                              StatsCard(icon: Icons.percent, value: '$percentage%', label: isUrdu ? 'حاضری%' : 'Attendance%', color: const Color(0xFF3B82F6)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
-              ),
-            ),
-          )).toList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiniStat(String label, String value, Color color) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
-            Text(label, style: TextStyle(fontSize: 11, color: color)),
-          ],
-        ),
       ),
     );
   }

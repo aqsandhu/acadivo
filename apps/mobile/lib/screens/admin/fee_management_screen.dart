@@ -1,114 +1,124 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/stats_card.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/fee_service.dart';
+import '../../services/api_service.dart';
+import '../../models/fee_record_model.dart';
 
 class FeeManagementScreen extends ConsumerStatefulWidget {
   const FeeManagementScreen({super.key});
-
   @override
   ConsumerState<FeeManagementScreen> createState() => _FeeManagementScreenState();
 }
 
 class _FeeManagementScreenState extends ConsumerState<FeeManagementScreen> {
-  bool _isUrdu = false;
+  bool _isLoading = true;
+  String? _error;
+  List<FeeRecordModel> _records = [];
+  List<FeeRecordModel> _filtered = [];
+  final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _structures = [
-    {'class': 'Class 1-5', 'amount': 4000, 'type': 'Monthly'},
-    {'class': 'Class 6-8', 'amount': 5000, 'type': 'Monthly'},
-    {'class': 'Class 9-10', 'amount': 6000, 'type': 'Monthly'},
-  ];
+  @override
+  void initState() { super.initState(); _loadData(); }
 
-  final List<Map<String, dynamic>> _records = [
-    {'student': 'Ahmad Ali', 'amount': 5000, 'status': 'paid', 'date': '10 Mar'},
-    {'student': 'Fatima Zahra', 'amount': 4000, 'status': 'unpaid', 'date': '-'},
-    {'student': 'Bilal Khan', 'amount': 5000, 'status': 'partial', 'date': '08 Mar'},
-  ];
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = FeeService(api);
+      final data = await service.getFeeRecords();
+      setState(() { _records = data; _filtered = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
+
+  void _search(String query) {
+    final q = query.toLowerCase();
+    setState(() {
+      _filtered = _records.where((r) =>
+        (r.studentName?.toLowerCase().contains(q) ?? false) ||
+        (r.status.name.toLowerCase().contains(q))
+      ).toList();
+    });
+  }
+
+  @override
+  void dispose() { _searchController.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return DefaultTabController(
-      length: 2,
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         appBar: CustomAppBar(
-          title: _isUrdu ? 'فیس کا انتظام' : 'Fee Management',
-          bottom: TabBar(
-            tabs: [
-              Tab(text: _isUrdu ? 'فیس ڈھانچہ' : 'Fee Structure'),
-              Tab(text: _isUrdu ? 'فیس ریکارڈ' : 'Fee Records'),
-            ],
-          ),
-          isUrdu: _isUrdu,
+          title: isUrdu ? 'فیس کا انتظام' : 'Fee Management',
+          isUrdu: isUrdu,
         ),
-        body: TabBarView(
+        body: Column(
           children: [
-            ListView(
+            Padding(
               padding: const EdgeInsets.all(16),
-              children: [
-                ..._structures.map((s) => Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    title: Text(s['class']),
-                    subtitle: Text(s['type']),
-                    trailing: Text(
-                      'Rs. ${s['amount']}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                )).toList(),
-              ],
-            ),
-            ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 3,
-                  childAspectRatio: 1.5,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                  children: [
-                    StatsCard(icon: Icons.paid, value: 'Rs. 125K', label: 'Collected', color: Color(0xFF10B981)),
-                    StatsCard(icon: Icons.money_off, value: 'Rs. 45K', label: 'Pending', color: Color(0xFFEF4444)),
-                    StatsCard(icon: Icons.people, value: '820', label: 'Students', color: Color(0xFF3B82F6)),
-                  ],
+              child: TextField(
+                controller: _searchController,
+                onChanged: _search,
+                decoration: InputDecoration(
+                  hintText: isUrdu ? 'تلاش کریں...' : 'Search fee records...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                const SizedBox(height: 20),
-                ..._records.map((r) => Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    title: Text(r['student']),
-                    subtitle: Text('Date: ${r['date']}'),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Rs. ${r['amount']}',
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Expanded(
+              child: _isLoading && _records.isEmpty
+                ? const Center(child: LoadingWidget())
+                : _error != null && _records.isEmpty
+                  ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                  : _filtered.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.payment_outlined,
+                        title: isUrdu ? 'کوئی فیس ریکارڈ نہیں' : 'No Fee Records',
+                        subtitle: isUrdu ? 'کوئی فیس ریکارڈ دستیاب نہیں' : 'No fee records available.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ListView.builder(
+                          itemCount: _filtered.length,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemBuilder: (context, index) {
+                            final r = _filtered[index];
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: r.status == FeePaymentStatus.paid ? Colors.green.shade50 : Colors.orange.shade50,
+                                  child: Icon(Icons.payment, color: r.status == FeePaymentStatus.paid ? Colors.green : Colors.orange, size: 18),
+                                ),
+                                title: Text(r.studentName ?? 'Unknown', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                subtitle: Text('${r.feeName ?? ""} • Rs. ${r.amount ?? 0}'),
+                                trailing: StatusBadge(
+                                  label: r.status,
+                                  type: r.status == FeePaymentStatus.paid ? StatusType.success : StatusType.warning,
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                        const SizedBox(height: 4),
-                        if (r['status'] == 'paid')
-                          const StatusBadge(label: 'Paid', type: StatusType.success)
-                        else if (r['status'] == 'unpaid')
-                          const StatusBadge(label: 'Unpaid', type: StatusType.danger)
-                        else
-                          const StatusBadge(label: 'Partial', type: StatusType.warning),
-                      ],
-                    ),
-                  ),
-                )).toList(),
-              ],
+                      ),
             ),
           ],
         ),

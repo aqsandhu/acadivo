@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { StudentSidebar } from "@/components/layout/StudentSidebar";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,11 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { QAItem } from "@/types";
 import { HelpCircle, Globe, CheckCircle2 } from "lucide-react";
 
 export default function StudentQAPage() {
+  const { user } = useAuth();
   const [items, setItems] = useState<QAItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [question, setQuestion] = useState("");
@@ -24,7 +26,7 @@ export default function StudentQAPage() {
   }, []);
 
   const ask = async () => {
-    await mockApi.askQuestion({ question, subject, studentId: "STD-001", studentName: "Muhammad Ali" });
+    await mockApi.askQuestion({ question, subject, studentId: user?.id || "", studentName: user?.name || "" });
     alert("Question submitted!");
     setQuestion("");
   };

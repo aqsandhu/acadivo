@@ -1,0 +1,120 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Acadivo - Logs & Security",
+    "tags": [
+      "acadivo",
+      "logs",
+      "security"
+    ],
+    "timezone": "Asia/Karachi",
+    "schemaVersion": 36,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Log Volume",
+        "type": "timeseries",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "sum(rate({job=\"acadivo\"}[5m]))",
+            "legendFormat": "Logs/sec"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Error Logs",
+        "type": "timeseries",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "sum(rate({job=\"acadivo\"} |= \"ERROR\" [5m]))",
+            "legendFormat": "Errors/sec"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Auth Failures",
+        "type": "timeseries",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "sum(rate({job=\"acadivo\"} |= \"Authentication failed\" [5m]))",
+            "legendFormat": "Auth Failures"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Cross-Tenant Blocks",
+        "type": "timeseries",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "sum(rate({job=\"acadivo\"} |= \"Cross-tenant\" [5m]))",
+            "legendFormat": "Blocks"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Recent Security Events",
+        "type": "logs",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "targets": [
+          {
+            "expr": "{job=\"acadivo\"} |= \"WARN\" or \"ERROR\" or \"security\" | json"
+          }
+        ],
+        "gridPos": {
+          "h": 16,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        }
+      }
+    ]
+  }
+}

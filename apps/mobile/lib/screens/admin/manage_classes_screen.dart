@@ -1,69 +1,124 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_button.dart';
+import '../../widgets/loading_widget.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/admin_service.dart';
+import '../../services/api_service.dart';
+import '../../models/class_model.dart';
 
 class ManageClassesScreen extends ConsumerStatefulWidget {
   const ManageClassesScreen({super.key});
-
   @override
   ConsumerState<ManageClassesScreen> createState() => _ManageClassesScreenState();
 }
 
 class _ManageClassesScreenState extends ConsumerState<ManageClassesScreen> {
-  bool _isUrdu = false;
+  bool _isLoading = true;
+  String? _error;
+  List<ClassModel> _classes = [];
+  List<ClassModel> _filtered = [];
+  final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _classes = [
-    {'name': 'Class 8', 'sections': ['A', 'B', 'C'], 'students': 95},
-    {'name': 'Class 9', 'sections': ['A', 'B'], 'students': 62},
-    {'name': 'Class 10', 'sections': ['A', 'B', 'C', 'D'], 'students': 120},
-  ];
+  @override
+  void initState() { super.initState(); _loadData(); }
+
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = AdminService(api);
+      final data = await service.getClasses();
+      setState(() { _classes = data; _filtered = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
+
+  void _search(String query) {
+    final q = query.toLowerCase();
+    setState(() {
+      _filtered = _classes.where((c) =>
+        c.name.toLowerCase().contains(q) ||
+        (c.grade?.toLowerCase().contains(q) ?? false)
+      ).toList();
+    });
+  }
+
+  @override
+  void dispose() { _searchController.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'کلاسز کا انتظام' : 'Manage Classes',
-        actions: [IconButton(icon: const Icon(Icons.add), onPressed: () {})],
-        isUrdu: _isUrdu,
-      ),
-      body: _classes.isEmpty
-          ? EmptyStateWidget(
-              icon: Icons.class_outlined,
-              title: _isUrdu ? 'کوئی کلاسز نہیں' : 'No Classes',
-              subtitle: '',
-            )
-          : ListView.builder(
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'کلاسز کا انتظام' : 'Manage Classes',
+          isUrdu: isUrdu,
+        ),
+        body: Column(
+          children: [
+            Padding(
               padding: const EdgeInsets.all(16),
-              itemCount: _classes.length,
-              itemBuilder: (context, index) {
-                final c = _classes[index];
-                return Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: ExpansionTile(
-                    title: Text(c['name']),
-                    subtitle: Text('${c['students']} students | ${c['sections'].length} sections'),
-                    children: c['sections'].map<Widget>((s) => ListTile(
-                      title: Text('Section $s'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: () {}),
-                          IconButton(icon: const Icon(Icons.delete, size: 20, color: Colors.red), onPressed: () {}),
-                        ],
-                      ),
-                    )).toList(),
-                  ),
-                );
-              },
+              child: TextField(
+                controller: _searchController,
+                onChanged: _search,
+                decoration: InputDecoration(
+                  hintText: isUrdu ? 'تلاش کریں...' : 'Search classes...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        child: const Icon(Icons.add),
+            Expanded(
+              child: _isLoading && _classes.isEmpty
+                ? const Center(child: LoadingWidget())
+                : _error != null && _classes.isEmpty
+                  ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                  : _filtered.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.class_outlined,
+                        title: isUrdu ? 'کوئی کلاس نہیں' : 'No Classes Found',
+                        subtitle: isUrdu ? 'تلاش کے مطابق کوئی کلاس نہیں ملی' : 'No classes match your search.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ListView.builder(
+                          itemCount: _filtered.length,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemBuilder: (context, index) {
+                            final c = _filtered[index];
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: theme.colorScheme.primaryContainer,
+                                  child: Text(c.name.substring(0, 1), style: TextStyle(color: theme.colorScheme.primary)),
+                                ),
+                                title: Text(c.name, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                subtitle: Text('${c.grade ?? ""} • ${c.sectionCount ?? 0} ${isUrdu ? "سیکشنز" : "Sections"}'),
+                                trailing: const Icon(Icons.chevron_right),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+            ),
+          ],
+        ),
       ),
     );
   }

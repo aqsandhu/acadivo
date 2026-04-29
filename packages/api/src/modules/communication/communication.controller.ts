@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth";
-import { ApiResponse } from "../../lib/ApiResponse";
+import { ApiResponse } from "../../utils/ApiResponse";
 import { asyncHandler } from "../../lib/asyncHandler";
 import * as communicationService from "./communication.service";
 import * as notificationService from "./notification.service";

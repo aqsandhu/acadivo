@@ -8,7 +8,7 @@ import { HomeworkCard } from "@/components/dashboard/HomeworkCard";
 import { TimetableGrid } from "@/components/dashboard/TimetableGrid";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import { useTranslation } from "react-i18next";
 import type { HomeworkItem, Announcement, TimetableSlot } from "@/types";
 import { ClipboardCheck, FileText, Bell, Trophy, GraduationCap } from "lucide-react";

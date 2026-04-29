@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Notification } from "@/types";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 
 interface NotificationContextType {
   notifications: Notification[];

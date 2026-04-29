@@ -1,170 +1,132 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/teacher_service.dart';
+import '../../services/api_service.dart';
+import '../../models/homework_model.dart';
 
 class TeacherHomeworkScreen extends ConsumerStatefulWidget {
   const TeacherHomeworkScreen({super.key});
-
   @override
   ConsumerState<TeacherHomeworkScreen> createState() => _TeacherHomeworkScreenState();
 }
 
 class _TeacherHomeworkScreenState extends ConsumerState<TeacherHomeworkScreen> {
-  int _selectedTab = 0;
-  bool _isUrdu = false;
+  bool _isLoading = true;
+  String? _error;
+  List<HomeworkModel> _homework = [];
+  List<HomeworkModel> _filtered = [];
+  final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _assigned = [
-    {'title': 'Algebra Exercises', 'class': 'Class 8-A', 'dueDate': '18 Mar 2024', 'submissions': 12, 'total': 32},
-    {'title': 'Physics Lab Report', 'class': 'Class 9-B', 'dueDate': '20 Mar 2024', 'submissions': 5, 'total': 30},
-  ];
+  @override
+  void initState() { super.initState(); _loadData(); }
 
-  final List<Map<String, dynamic>> _submissions = [
-    {'student': 'Ahmad Ali', 'status': 'submitted', 'date': '17 Mar', 'grade': null},
-    {'student': 'Bilal Khan', 'status': 'late', 'date': '18 Mar', 'grade': 'B'},
-    {'student': 'Fatima Zahra', 'status': 'pending', 'date': '-', 'grade': null},
-  ];
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = TeacherService(api);
+      final data = await service.getHomework();
+      setState(() { _homework = data; _filtered = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
+
+  void _search(String query) {
+    final q = query.toLowerCase();
+    setState(() {
+      _filtered = _homework.where((h) =>
+        h.title.toLowerCase().contains(q) ||
+        (h.subjectName?.toLowerCase().contains(q) ?? false)
+      ).toList();
+    });
+  }
+
+  @override
+  void dispose() { _searchController.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'ہوم ورک' : 'Homework',
-        isUrdu: _isUrdu,
-      ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: SegmentedButton<int>(
-              segments: [
-                ButtonSegment(
-                  value: 0,
-                  label: Text(_isUrdu ? 'تفویض شدہ' : 'Assigned'),
-                ),
-                ButtonSegment(
-                  value: 1,
-                  label: Text(_isUrdu ? 'جمع کروائیاں' : 'Submissions'),
-                ),
-              ],
-              selected: {_selectedTab},
-              onSelectionChanged: (v) => setState(() => _selectedTab = v.first),
-            ),
-          ),
-          Expanded(
-            child: _selectedTab == 0 ? _buildAssignedTab(theme) : _buildSubmissionsTab(theme),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
-        icon: const Icon(Icons.add),
-        label: Text(_isUrdu ? 'ہوم ورک بنائیں' : 'Create Homework'),
-      ),
-    );
-  }
-
-  Widget _buildAssignedTab(ThemeData theme) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _assigned.length,
-      itemBuilder: (context, index) {
-        final h = _assigned[index];
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-          ),
-          child: InkWell(
-            onTap: () {},
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'ہوم ورک' : 'Homework',
+          isUrdu: isUrdu,
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => context.push(RouteNames.teacherHomework + '/create'),
+          child: const Icon(Icons.add),
+        ),
+        body: Column(
+          children: [
+            Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          h['class'],
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        'Due: ${h['dueDate']}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    h['title'],
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: h['submissions'] / h['total'],
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${h['submissions']}/${h['total']} submissions',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+              child: TextField(
+                controller: _searchController,
+                onChanged: _search,
+                decoration: InputDecoration(
+                  hintText: isUrdu ? 'تلاش کریں...' : 'Search homework...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSubmissionsTab(ThemeData theme) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _submissions.length,
-      itemBuilder: (context, index) {
-        final s = _submissions[index];
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-          ),
-          child: ListTile(
-            title: Text(s['student']),
-            subtitle: Text('Submitted: ${s['date']}'),
-            trailing: s['status'] == 'submitted'
-                ? FilledButton(
-                    onPressed: () {},
-                    child: Text(_isUrdu ? 'درجہ بندی' : 'Grade'),
-                  )
-                : s['status'] == 'late'
-                    ? const StatusBadge(label: 'Late', type: StatusType.warning)
-                    : const StatusBadge(label: 'Pending', type: StatusType.info),
-          ),
-        );
-      },
+            Expanded(
+              child: _isLoading && _homework.isEmpty
+                ? const Center(child: LoadingWidget())
+                : _error != null && _homework.isEmpty
+                  ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                  : _filtered.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.assignment_outlined,
+                        title: isUrdu ? 'کوئی ہوم ورک نہیں' : 'No Homework',
+                        subtitle: isUrdu ? 'کوئی ہوم ورک تفویض نہیں کیا گیا' : 'No homework assigned yet.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ListView.builder(
+                          itemCount: _filtered.length,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemBuilder: (context, index) {
+                            final h = _filtered[index];
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: theme.colorScheme.secondaryContainer,
+                                  child: Icon(Icons.assignment, color: theme.colorScheme.secondary, size: 18),
+                                ),
+                                title: Text(h.title, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                subtitle: Text('${h.subjectName ?? ""} • ${h.className ?? ""}'),
+                                trailing: StatusBadge(
+                                  label: h.status,
+                                  type: h.isActive ? StatusType.success : StatusType.info,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

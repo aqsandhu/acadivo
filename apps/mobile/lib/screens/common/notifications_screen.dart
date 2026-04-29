@@ -1,141 +1,131 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_widget.dart';
 import '../../widgets/empty_state_widget.dart';
-import '../../widgets/pull_to_refresh.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/communication_service.dart';
+import '../../services/api_service.dart';
+import '../../models/notification_model.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
-
   @override
   ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
-  bool _isUrdu = false;
-  final List<Map<String, dynamic>> _notifications = [
-    {'title': 'New Homework Assigned', 'subtitle': 'Mathematics - Due tomorrow', 'time': '2 min ago', 'read': false, 'type': 'homework'},
-    {'title': 'Attendance Alert', 'subtitle': 'Your child was absent today', 'time': '1 hour ago', 'read': false, 'type': 'attendance'},
-    {'title': 'Fee Reminder', 'subtitle': 'Fee due on 15th March', 'time': '3 hours ago', 'read': true, 'type': 'fee'},
-    {'title': 'School Announcement', 'subtitle': 'Holiday on 23rd March', 'time': 'Yesterday', 'read': true, 'type': 'announcement'},
-  ];
+  bool _isLoading = true;
+  String? _error;
+  List<NotificationModel> _notifications = [];
 
-  IconData _getIcon(String type) {
-    switch (type) {
-      case 'homework': return Icons.assignment_outlined;
-      case 'attendance': return Icons.event_busy_outlined;
-      case 'fee': return Icons.payment_outlined;
-      case 'announcement': return Icons.campaign_outlined;
-      case 'message': return Icons.message_outlined;
-      default: return Icons.notifications_outlined;
+  @override
+  void initState() { super.initState(); _loadData(); }
+
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = CommunicationService(api);
+      final data = await service.getNotifications();
+      setState(() { _notifications = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
     }
   }
 
-  Color _getIconColor(String type, ThemeData theme) {
-    switch (type) {
-      case 'homework': return const Color(0xFF1E40AF);
-      case 'attendance': return const Color(0xFFF59E0B);
-      case 'fee': return const Color(0xFFEF4444);
-      case 'announcement': return const Color(0xFF10B981);
-      default: return theme.colorScheme.primary;
-    }
+  Future<void> _markRead(String id) async {
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = CommunicationService(api);
+      await service.markNotificationRead(id);
+      setState(() {
+        _notifications = _notifications.map((n) => n.id == id ? n.copyWith(isRead: true) : n).toList();
+      });
+    } catch (_) {}
   }
 
-  Future<void> _onRefresh() async {
-    await Future.delayed(const Duration(seconds: 1));
-  }
-
-  void _markAllRead() {
-    setState(() {
-      for (var n in _notifications) {
-        n['read'] = true;
-      }
-    });
+  Future<void> _markAllRead() async {
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = CommunicationService(api);
+      await service.markAllNotificationsRead();
+      setState(() {
+        _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
+      });
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    final unreadCount = _notifications.where((n) => !n['read']).length;
-
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'اطلاعات' : 'Notifications',
-        actions: [
-          if (unreadCount > 0)
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'نوٹیفیکیشنز' : 'Notifications',
+          actions: [
             TextButton(
               onPressed: _markAllRead,
-              child: Text(_isUrdu ? 'سب پڑھیں' : 'Mark All Read'),
+              child: Text(isUrdu ? 'سب پڑھ لیں' : 'Mark All Read'),
             ),
-        ],
-        isUrdu: _isUrdu,
-      ),
-      body: PullToRefresh(
-        onRefresh: _onRefresh,
-        child: _notifications.isEmpty
-            ? EmptyStateWidget(
-                icon: Icons.notifications_off_outlined,
-                title: _isUrdu ? 'کوئی اطلاعات نہیں' : 'No Notifications',
-                subtitle: _isUrdu ? 'آپ کے پاس کوئی نئی اطلاعات نہیں' : 'You have no new notifications',
-              )
-            : ListView.builder(
-                itemCount: _notifications.length,
-                itemBuilder: (context, index) {
-                  final n = _notifications[index];
-                  return Dismissible(
-                    key: ValueKey(index),
-                    background: Container(
-                      color: theme.colorScheme.primary,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.only(left: 20),
-                      child: const Icon(Icons.check, color: Colors.white),
-                    ),
-                    secondaryBackground: Container(
-                      color: theme.colorScheme.error,
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 20),
-                      child: const Icon(Icons.delete, color: Colors.white),
-                    ),
-                    onDismissed: (_) {
-                      setState(() => _notifications.removeAt(index));
-                    },
-                    child: ListTile(
-                      leading: Stack(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: _getIconColor(n['type'], theme).withOpacity(0.1),
-                            child: Icon(
-                              _getIcon(n['type']),
-                              color: _getIconColor(n['type'], theme),
-                            ),
-                          ),
-                          if (!n['read'])
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: Container(
-                                width: 10,
-                                height: 10,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF3B82F6),
-                                  shape: BoxShape.circle,
+          ],
+          isUrdu: isUrdu,
+        ),
+        body: _isLoading && _notifications.isEmpty
+            ? const Center(child: LoadingWidget())
+            : _error != null && _notifications.isEmpty
+                ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                : _notifications.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.notifications_none_outlined,
+                        title: isUrdu ? 'کوئی نوٹیفیکیشن نہیں' : 'No Notifications',
+                        subtitle: isUrdu ? 'ابھی تک کوئی نوٹیفیکیشن نہیں' : 'No notifications yet.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ListView.builder(
+                          itemCount: _notifications.length,
+                          padding: const EdgeInsets.all(16),
+                          itemBuilder: (context, index) {
+                            final n = _notifications[index];
+                            return Dismissible(
+                              key: Key(n.id),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                color: Colors.red,
+                                child: const Icon(Icons.delete, color: Colors.white),
+                              ),
+                              child: Card(
+                                elevation: 0,
+                                margin: const EdgeInsets.only(bottom: 8),
+                                color: n.isRead ? null : theme.colorScheme.primaryContainer.withOpacity(0.1),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                child: ListTile(
+                                  leading: Icon(
+                                    n.isRead ? Icons.notifications_outlined : Icons.notifications_active,
+                                    color: n.isRead ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary,
+                                  ),
+                                  title: Text(n.title, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: n.isRead ? FontWeight.normal : FontWeight.w600)),
+                                  subtitle: Text(n.body, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  trailing: Text(n.createdAt != null ? '${n.createdAt!.day}/${n.createdAt!.month}' : '', style: theme.textTheme.bodySmall),
+                                  onTap: () => _markRead(n.id),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      title: Text(
-                        n['title'],
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: n['read'] ? FontWeight.normal : FontWeight.w600,
+                            );
+                          },
                         ),
                       ),
-                      subtitle: Text('${n['subtitle']} • ${n['time']}'),
-                      onTap: () => setState(() => n['read'] = true),
-                    ),
-                  );
-                },
-              ),
       ),
     );
   }

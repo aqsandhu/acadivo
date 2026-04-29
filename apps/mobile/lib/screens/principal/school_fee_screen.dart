@@ -1,97 +1,150 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
 import '../../widgets/stats_card.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/principal_service.dart';
+import '../../services/api_service.dart';
+import '../../models/fee_record_model.dart';
 
 class SchoolFeeScreen extends ConsumerStatefulWidget {
   const SchoolFeeScreen({super.key});
-
   @override
   ConsumerState<SchoolFeeScreen> createState() => _SchoolFeeScreenState();
 }
 
 class _SchoolFeeScreenState extends ConsumerState<SchoolFeeScreen> {
-  bool _isUrdu = false;
+  bool _isLoading = true;
+  String? _error;
+  Map<String, dynamic> _overview = {};
+  List<FeeRecordModel> _records = [];
+  List<FeeRecordModel> _filtered = [];
+  final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _overview = [
-    {'class': 'Class 1-5', 'collected': 180000, 'pending': 40000},
-    {'class': 'Class 6-8', 'collected': 220000, 'pending': 50000},
-    {'class': 'Class 9-10', 'collected': 280000, 'pending': 60000},
-  ];
+  @override
+  void initState() { super.initState(); _loadData(); }
+
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = PrincipalService(api);
+      final overview = await service.getFeeOverview();
+      final records = await service.getFeeRecords();
+      setState(() { _overview = overview; _records = records; _filtered = records; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
+
+  void _search(String query) {
+    final q = query.toLowerCase();
+    setState(() {
+      _filtered = _records.where((r) =>
+        (r.studentName?.toLowerCase().contains(q) ?? false) ||
+        r.status.name.toLowerCase().contains(q)
+      ).toList();
+    });
+  }
+
+  @override
+  void dispose() { _searchController.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'اسکول فیس' : 'School Fee Overview',
-        isUrdu: _isUrdu,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            childAspectRatio: 1.5,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            children: const [
-              StatsCard(icon: Icons.paid, value: 'Rs. 680K', label: 'Collected', color: Color(0xFF10B981)),
-              StatsCard(icon: Icons.money_off, value: 'Rs. 150K', label: 'Pending', color: Color(0xFFEF4444)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(
-            _isUrdu ? 'کلاس وار جائزہ' : 'Class-wise Overview',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          ..._overview.map((o) => Card(
-            elevation: 0,
-            margin: const EdgeInsets.only(bottom: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(o['class'], style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildFeeStat('Collected', 'Rs. ${o['collected']}', const Color(0xFF10B981)),
-                      ),
-                      Expanded(
-                        child: _buildFeeStat('Pending', 'Rs. ${o['pending']}', const Color(0xFFEF4444)),
-                      ),
-                    ],
-                  ),
-                ],
+    final collected = _overview['collected'] ?? 0.0;
+    final pending = _overview['pending'] ?? 0.0;
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'اسکول کی فیس' : 'School Fee',
+          isUrdu: isUrdu,
+        ),
+        body: Column(
+          children: [
+            if (_isLoading && _records.isEmpty)
+              const Expanded(child: Center(child: LoadingWidget()))
+            else if (_error != null && _records.isEmpty)
+              Expanded(child: AppErrorWidget(message: _error!, onRetry: _loadData))
+            else ...[
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.5,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  children: [
+                    StatsCard(icon: Icons.paid, value: 'Rs. ${collected.toStringAsFixed(0)}', label: isUrdu ? 'وصول شدہ' : 'Collected', color: const Color(0xFF10B981)),
+                    StatsCard(icon: Icons.pending_actions, value: 'Rs. ${pending.toStringAsFixed(0)}', label: isUrdu ? 'باقی' : 'Pending', color: const Color(0xFFF59E0B)),
+                  ],
+                ),
               ),
-            ),
-          )).toList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeeStat(String label, String value, Color color) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13)),
-          Text(label, style: TextStyle(fontSize: 11, color: color)),
-        ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _search,
+                  decoration: InputDecoration(
+                    hintText: isUrdu ? 'تلاش کریں...' : 'Search fee records...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: _filtered.isEmpty
+                  ? EmptyStateWidget(
+                      icon: Icons.payment_outlined,
+                      title: isUrdu ? 'کوئی فیس ریکارڈ نہیں' : 'No Fee Records',
+                      subtitle: isUrdu ? 'کوئی فیس ریکارڈ دستیاب نہیں' : 'No fee records available.',
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadData,
+                      child: ListView.builder(
+                        itemCount: _filtered.length,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemBuilder: (context, index) {
+                          final r = _filtered[index];
+                          return Card(
+                            elevation: 0,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: r.status == FeePaymentStatus.paid ? Colors.green.shade50 : Colors.orange.shade50,
+                                child: Icon(Icons.payment, color: r.status == FeePaymentStatus.paid ? Colors.green : Colors.orange, size: 18),
+                              ),
+                              title: Text(r.studentName ?? 'Unknown', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                              subtitle: Text('${r.feeName ?? ""} • Rs. ${r.amount ?? 0}'),
+                              trailing: StatusBadge(
+                                label: r.status,
+                                type: r.status == FeePaymentStatus.paid ? StatusType.success : StatusType.warning,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

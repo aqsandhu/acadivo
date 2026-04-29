@@ -228,7 +228,7 @@ services:
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_USERS_ALLOW_SIGN_UP: false
       GF_SERVER_ROOT_URL: https://monitoring.acadivo.com
     networks:
@@ -260,7 +260,13 @@ services:
 
   # ── Loki (Log Aggregation) ───────────────────────────────────────────────
   loki:
-    image: grafana/loki:2.9.0
+    environment:
+      - LOKI_USER=${LOKI_USER:-loki}
+      - LOKI_PASSWORD=${LOKI_PASSWORD}
+    image: grafana/loki:
+    environment:
+      - LOKI_USER=${LOKI_USER:-loki}
+      - LOKI_PASSWORD=${LOKI_PASSWORD}2.9.0
     container_name: acadivo-loki
     restart: always
     ports:

@@ -6,7 +6,7 @@ import { ParentSidebar } from "@/components/layout/ParentSidebar";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ChildProfileCard } from "@/components/dashboard/ChildProfileCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { ChildProfile } from "@/types";
 
 export default function ParentChildrenPage() {

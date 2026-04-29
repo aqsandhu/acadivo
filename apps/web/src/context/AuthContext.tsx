@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import type { User, LoginCredentials, AuthTokens } from "@/types";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 
 interface AuthContextType {
   user: User | null;

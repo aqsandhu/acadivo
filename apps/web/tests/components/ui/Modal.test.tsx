@@ -1,175 +1,101 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import { render } from '../test-utils';
+import { Modal } from '@/components/ui/Modal';
 
-const MockModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  title?: string;
-  children: React.ReactNode;
-  footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  closeOnOverlayClick?: boolean;
-  closeOnEsc?: boolean;
-}> = ({ isOpen, onClose, title, children, footer, size = 'md', closeOnOverlayClick = true, closeOnEsc = true }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div data-testid="modal-overlay" onClick={() => closeOnOverlayClick && onClose()}>
-      <div data-testid="modal-content" className={`modal-${size}`} onClick={(e) => e.stopPropagation()}>
-        {title && (
-          <div data-testid="modal-header">
-            <h2>{title}</h2>
-            <button data-testid="modal-close-btn" onClick={onClose} aria-label="Close modal">
-              ×
-            </button>
-          </div>
-        )}
-        <div data-testid="modal-body">{children}</div>
-        {footer && <div data-testid="modal-footer">{footer}</div>}
-      </div>
-    </div>
-  );
-};
-
-describe('Modal Component', () => {
-  it('does not render when closed', () => {
+describe('Modal Component (Real)', () => {
+  it('does not render when open is false', () => {
     render(
-      <MockModal isOpen={false} onClose={vi.fn()}>
-        Modal content
-      </MockModal>
+      <Modal open={false} onClose={vi.fn()}>
+        Modal Content
+      </Modal>
     );
-    expect(screen.queryByTestId('modal-overlay')).not.toBeInTheDocument();
+    expect(screen.queryByText('Modal Content')).not.toBeInTheDocument();
   });
 
-  it('renders when open', () => {
+  it('renders when open is true', () => {
     render(
-      <MockModal isOpen={true} onClose={vi.fn()}>
-        Modal content
-      </MockModal>
+      <Modal open={true} onClose={vi.fn()}>
+        Modal Content
+      </Modal>
     );
-    expect(screen.getByTestId('modal-overlay')).toBeInTheDocument();
-    expect(screen.getByTestId('modal-body')).toHaveTextContent('Modal content');
+    expect(screen.getByText('Modal Content')).toBeInTheDocument();
   });
 
-  it('renders with title', () => {
+  it('renders with title and description', () => {
     render(
-      <MockModal isOpen={true} onClose={vi.fn()} title="Confirm Action">
-        Content
-      </MockModal>
+      <Modal open={true} onClose={vi.fn()} title="Modal Title" description="Modal Description">
+        Body
+      </Modal>
     );
-    expect(screen.getByTestId('modal-header')).toBeInTheDocument();
-    expect(screen.getByText('Confirm Action')).toBeInTheDocument();
+    expect(screen.getByText('Modal Title')).toBeInTheDocument();
+    expect(screen.getByText('Modal Description')).toBeInTheDocument();
   });
 
-  it('renders with footer', () => {
-    render(
-      <MockModal isOpen={true} onClose={vi.fn()} footer={<button>Save</button>}>
-        Content
-      </MockModal>
-    );
-    expect(screen.getByTestId('modal-footer')).toBeInTheDocument();
-    expect(screen.getByText('Save')).toBeInTheDocument();
-  });
-
-  it('calls onClose when clicking close button', () => {
+  it('calls onClose when close button clicked', () => {
     const handleClose = vi.fn();
     render(
-      <MockModal isOpen={true} onClose={handleClose} title="Test">
+      <Modal open={true} onClose={handleClose}>
         Content
-      </MockModal>
+      </Modal>
     );
-    fireEvent.click(screen.getByTestId('modal-close-btn'));
+    const closeBtn = screen.getByLabelText('Close dialog');
+    fireEvent.click(closeBtn);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
-  it('closes on overlay click when enabled', () => {
+  it('calls onClose when backdrop clicked', () => {
     const handleClose = vi.fn();
     render(
-      <MockModal isOpen={true} onClose={handleClose} closeOnOverlayClick={true}>
+      <Modal open={true} onClose={handleClose}>
         Content
-      </MockModal>
+      </Modal>
     );
-    fireEvent.click(screen.getByTestId('modal-overlay'));
-    expect(handleClose).toHaveBeenCalledTimes(1);
+    const backdrop = screen.getByText('Content').parentElement?.previousElementSibling;
+    if (backdrop) fireEvent.click(backdrop);
+    expect(handleClose).toHaveBeenCalled();
   });
 
-  it('does not close on overlay click when disabled', () => {
-    const handleClose = vi.fn();
+  it('does not show close button when showCloseButton is false', () => {
     render(
-      <MockModal isOpen={true} onClose={handleClose} closeOnOverlayClick={false}>
+      <Modal open={true} onClose={vi.fn()} showCloseButton={false}>
         Content
-      </MockModal>
+      </Modal>
     );
-    fireEvent.click(screen.getByTestId('modal-overlay'));
-    expect(handleClose).not.toHaveBeenCalled();
-  });
-
-  it('does not close when clicking modal content', () => {
-    const handleClose = vi.fn();
-    render(
-      <MockModal isOpen={true} onClose={handleClose}>
-        Content
-      </MockModal>
-    );
-    fireEvent.click(screen.getByTestId('modal-body'));
-    expect(handleClose).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Close dialog')).not.toBeInTheDocument();
   });
 
   it('renders with different sizes', () => {
     const { rerender } = render(
-      <MockModal isOpen={true} onClose={vi.fn()} size="sm">
-        Small
-      </MockModal>
+      <Modal open={true} onClose={vi.fn()} size="sm" title="Small">
+        Small modal
+      </Modal>
     );
-    expect(screen.getByTestId('modal-content')).toHaveClass('modal-sm');
+    expect(screen.getByText('Small modal')).toBeInTheDocument();
 
     rerender(
-      <MockModal isOpen={true} onClose={vi.fn()} size="lg">
-        Large
-      </MockModal>
+      <Modal open={true} onClose={vi.fn()} size="lg" title="Large">
+        Large modal
+      </Modal>
     );
-    expect(screen.getByTestId('modal-content')).toHaveClass('modal-lg');
-
-    rerender(
-      <MockModal isOpen={true} onClose={vi.fn()} size="xl">
-        Extra Large
-      </MockModal>
-    );
-    expect(screen.getByTestId('modal-content')).toHaveClass('modal-xl');
+    expect(screen.getByText('Large modal')).toBeInTheDocument();
   });
 
-  it('renders complex content', () => {
+  it('renders footer content', () => {
     render(
-      <MockModal isOpen={true} onClose={vi.fn()} title="Student Form">
-        <form data-testid="student-form">
-          <input data-testid="name-input" placeholder="Name" />
-          <input data-testid="roll-input" placeholder="Roll Number" />
-        </form>
-      </MockModal>
+      <Modal open={true} onClose={vi.fn()} footer={<button>Save</button>}>
+        Body
+      </Modal>
     );
-    expect(screen.getByTestId('student-form')).toBeInTheDocument();
-    expect(screen.getByTestId('name-input')).toBeInTheDocument();
-    expect(screen.getByTestId('roll-input')).toBeInTheDocument();
+    expect(screen.getByText('Save')).toBeInTheDocument();
   });
 
-  it('renders with action buttons in footer', () => {
+  it('has dialog role for accessibility', () => {
     render(
-      <MockModal
-        isOpen={true}
-        onClose={vi.fn()}
-        title="Delete?"
-        footer={
-          <>
-            <button data-testid="cancel-btn">Cancel</button>
-            <button data-testid="confirm-btn">Delete</button>
-          </>
-        }
-      >
-        Are you sure?
-      </MockModal>
+      <Modal open={true} onClose={vi.fn()} title="Accessible">
+        Accessible content
+      </Modal>
     );
-    expect(screen.getByTestId('cancel-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('confirm-btn')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });

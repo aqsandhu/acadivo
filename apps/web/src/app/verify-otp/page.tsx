@@ -8,9 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowLeft, KeyRound, CheckCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import { AuthLayout } from "@/components/layout/AuthLayout";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 const otpSchema = z.object({
   otp: z.string().length(6, "OTP must be 6 digits"),

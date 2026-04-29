@@ -1,73 +1,93 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_widget.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/stats_card.dart';
+import '../../widgets/status_badge.dart';
 import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/communication_service.dart';
+import '../../services/api_service.dart';
+import '../../models/message_model.dart';
 
 class PrincipalMessagesScreen extends ConsumerStatefulWidget {
   const PrincipalMessagesScreen({super.key});
-
   @override
   ConsumerState<PrincipalMessagesScreen> createState() => _PrincipalMessagesScreenState();
 }
 
 class _PrincipalMessagesScreenState extends ConsumerState<PrincipalMessagesScreen> {
-  bool _isUrdu = false;
+  bool _isLoading = true;
+  String? _error;
+  List<ConversationModel> _conversations = [];
 
-  final List<Map<String, dynamic>> _conversations = [
-    {'name': 'Mr. Ali (Teacher)', 'lastMessage': 'About the sports day event', 'time': '10:30 AM', 'unread': 1},
-    {'name': 'Admin Office', 'lastMessage': 'Fee collection report', 'time': 'Yesterday', 'unread': 0},
-    {'name': 'Mrs. Fatima (Teacher)', 'lastMessage': 'Lab equipment request', 'time': 'Mon', 'unread': 0},
-  ];
+  @override
+  void initState() { super.initState(); _loadData(); }
+
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = CommunicationService(api);
+      final data = await service.getConversations();
+      setState(() { _conversations = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'پیغامات' : 'Messages',
-        isUrdu: _isUrdu,
-      ),
-      body: _conversations.isEmpty
-          ? EmptyStateWidget(icon: Icons.message_outlined, title: _isUrdu ? 'کوئی پیغامات نہیں' : 'No Messages', subtitle: '')
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _conversations.length,
-              itemBuilder: (context, index) {
-                final c = _conversations[index];
-                return ListTile(
-                  leading: UserAvatar(name: c['name'], size: 48),
-                  title: Text(
-                    c['name'],
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: c['unread'] > 0 ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                  subtitle: Text(c['lastMessage'], maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(c['time'], style: theme.textTheme.bodySmall),
-                      if (c['unread'] > 0)
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            c['unread'].toString(),
-                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'پیغامات' : 'Messages',
+          isUrdu: isUrdu,
+        ),
+        body: _isLoading && _conversations.isEmpty
+            ? const Center(child: LoadingWidget())
+            : _error != null && _conversations.isEmpty
+                ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                : _conversations.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.message_outlined,
+                        title: isUrdu ? 'کوئی پیغام نہیں' : 'No Messages',
+                        subtitle: isUrdu ? 'ابھی تک کوئی گفتگو نہیں' : 'No conversations yet.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ListView.builder(
+                          itemCount: _conversations.length,
+                          padding: const EdgeInsets.all(16),
+                          itemBuilder: (context, index) {
+                            final c = _conversations[index];
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                leading: UserAvatar(name: c.participantName ?? 'User', size: 40),
+                                title: Text(c.participantName ?? 'Unknown', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                subtitle: Text(c.lastMessage ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                trailing: c.unreadCount > 0
+                                  ? CircleAvatar(radius: 10, backgroundColor: theme.colorScheme.primary, child: Text('${c.unreadCount}', style: const TextStyle(fontSize: 10, color: Colors.white)))
+                                  : null,
+                                onTap: () => context.push('/messages/${c.participantId ?? ""}'),
+                              ),
+                            );
+                          },
                         ),
-                    ],
-                  ),
-                  onTap: () {},
-                );
-              },
-            ),
+                      ),
+      ),
     );
   }
 }
