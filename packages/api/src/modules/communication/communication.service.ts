@@ -1,6 +1,6 @@
 import { NotificationType, AnnouncementPriority, AnnouncementTargetAudience, MessageType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { ApiError } from "../../lib/ApiError";
+import { ApiError } from "../../utils/ApiError";
 import { createNotification, sendBulkNotifications } from "./notification.service";
 
 

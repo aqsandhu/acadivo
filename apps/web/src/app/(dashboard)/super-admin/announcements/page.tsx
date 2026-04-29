@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getAnnouncements, createAnnouncement, deleteAnnouncement, type Announcement } from "@/services/mockApi";
+import { useMockApi, getAnnouncements, createAnnouncement, deleteAnnouncement, type Announcement } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 

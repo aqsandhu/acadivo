@@ -7,7 +7,7 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ChildProfileCard } from "@/components/dashboard/ChildProfileCard";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import { useTranslation } from "react-i18next";
 import type { ChildProfile, Announcement } from "@/types";
 import { MessageSquare, CreditCard, Bell, FileBadge, AlertTriangle } from "lucide-react";

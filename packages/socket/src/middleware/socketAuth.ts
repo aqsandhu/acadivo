@@ -1,6 +1,7 @@
 /**
  * Socket.io JWT authentication middleware
  * Verifies token from handshake.auth.token on connection
+ * Supports all roles including PRINCIPAL
  */
 
 import jwt from "jsonwebtoken";
@@ -21,6 +22,8 @@ interface JwtPayload {
   exp?: number;
 }
 
+const VALID_ROLES = ["ADMIN", "PRINCIPAL", "TEACHER", "STUDENT", "PARENT"];
+
 export function socketAuthMiddleware(
   socket: Socket,
   next: (err?: ExtendedError) => void
@@ -36,6 +39,12 @@ export function socketAuthMiddleware(
     }
 
     const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+
+    // Validate role
+    if (!VALID_ROLES.includes(decoded.role)) {
+      logger.warn(`Authentication failed: invalid role '${decoded.role}'`);
+      return next(new Error("Authentication error: Invalid role"));
+    }
 
     const user: SocketUser = {
       userId: decoded.userId,

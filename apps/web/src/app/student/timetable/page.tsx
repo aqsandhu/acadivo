@@ -5,7 +5,7 @@ import { StudentSidebar } from "@/components/layout/StudentSidebar";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { TimetableGrid } from "@/components/dashboard/TimetableGrid";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { TimetableSlot } from "@/types";
 
 export default function StudentTimetablePage() {

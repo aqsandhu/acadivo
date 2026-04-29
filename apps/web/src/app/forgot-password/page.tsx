@@ -8,10 +8,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowLeft, Mail, Send, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import { AuthLayout } from "@/components/layout/AuthLayout";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const forgotSchema = z.object({
   email: z.string().email("Invalid email").optional().or(z.literal("")),

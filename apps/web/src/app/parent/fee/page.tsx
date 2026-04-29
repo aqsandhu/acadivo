@@ -5,7 +5,7 @@ import { ParentSidebar } from "@/components/layout/ParentSidebar";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FeeRecordCard } from "@/components/dashboard/FeeRecordCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { FeeRecord } from "@/types";
 import { CreditCard } from "lucide-react";
 

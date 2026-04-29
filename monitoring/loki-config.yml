@@ -1,4 +1,4 @@
-auth_enabled: false
+auth_enabled: true
 
 server:
   http_listen_port: 3100
@@ -32,6 +32,18 @@ schema_config:
       index:
         prefix: index_
         period: 24h
+
+# Basic auth for Loki
+auth:
+  type: basic
+  basic:
+    username: ${LOKI_USER:-loki}
+    password: ${LOKI_PASSWORD:-changeme}
+
+limits_config:
+  enforce_metric_name: false
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
 
 analytics:
   reporting_enabled: false

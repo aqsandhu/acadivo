@@ -4,7 +4,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { ApiError } from "../../lib/ApiError";
+import { ApiError } from "../../utils/ApiError";
 import { summarizeAttendance, getStartOfMonth, getEndOfMonth, isLateSubmission } from "../../lib/academic";
 
 // ═══════════════════════════════════════════════

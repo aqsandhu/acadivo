@@ -1,196 +1,126 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
 
-class TeacherQAScreen extends ConsumerStatefulWidget {
-  const TeacherQAScreen({super.key});
-
+class TeacherQaScreen extends ConsumerStatefulWidget {
+  const TeacherQaScreen({super.key});
   @override
-  ConsumerState<TeacherQAScreen> createState() => _TeacherQAScreenState();
+  ConsumerState<TeacherQaScreen> createState() => _TeacherQaScreenState();
 }
 
-class _TeacherQAScreenState extends ConsumerState<TeacherQAScreen> {
-  int _filter = 0;
-  bool _isUrdu = false;
+class _TeacherQaScreenState extends ConsumerState<TeacherQaScreen> {
+  final TextEditingController _questionController = TextEditingController();
+  final TextEditingController _answerController = TextEditingController();
+  final List<Map<String, dynamic>> _qaList = [];
 
-  final List<Map<String, dynamic>> _questions = [
-    {
-      'student': 'Ahmad Ali',
-      'subject': 'Mathematics',
-      'question': 'How do I solve quadratic equations?',
-      'date': '2 hours ago',
-      'answered': false,
-      'answer': '',
-    },
-    {
-      'student': 'Fatima Zahra',
-      'subject': 'Science',
-      'question': 'What is photosynthesis?',
-      'date': 'Yesterday',
-      'answered': true,
-      'answer': 'Photosynthesis is the process by which plants use sunlight to synthesize foods.',
-    },
-  ];
+  void _addQa() {
+    if (_questionController.text.isEmpty || _answerController.text.isEmpty) return;
+    setState(() {
+      _qaList.add({
+        'question': _questionController.text,
+        'answer': _answerController.text,
+        'date': DateTime.now().toString().split(' ')[0],
+      });
+      _questionController.clear();
+      _answerController.clear();
+    });
+  }
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    _answerController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    final filtered = _questions.where((q) {
-      if (_filter == 0) return true;
-      if (_filter == 1) return q['answered'];
-      return !q['answered'];
-    }).toList();
-
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'سوالات' : 'Q&A',
-        isUrdu: _isUrdu,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SegmentedButton<int>(
-              segments: [
-                ButtonSegment(value: 0, label: Text(_isUrdu ? 'سب' : 'All')),
-                ButtonSegment(value: 1, label: Text(_isUrdu ? 'جواب دیا' : 'Answered')),
-                ButtonSegment(value: 2, label: Text(_isUrdu ? 'بغیر جواب' : 'Unanswered')),
-              ],
-              selected: {_filter},
-              onSelectionChanged: (v) => setState(() => _filter = v.first),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: filtered.length,
-              itemBuilder: (context, index) {
-                final q = filtered[index];
-                return Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-                  ),
-                  child: InkWell(
-                    onTap: () => _showAnswerDialog(q),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.secondaryContainer,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  q['subject'],
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: theme.colorScheme.secondary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              StatusBadge(
-                                label: q['answered'] ? 'Answered' : 'Unanswered',
-                                type: q['answered'] ? StatusType.success : StatusType.warning,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            q['question'],
-                            style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(Icons.person_outline, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                              const SizedBox(width: 4),
-                              Text(q['student'], style: theme.textTheme.bodySmall),
-                              const SizedBox(width: 16),
-                              Icon(Icons.access_time, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                              const SizedBox(width: 4),
-                              Text(q['date'], style: theme.textTheme.bodySmall),
-                            ],
-                          ),
-                          if (q['answered']) ...[
-                            const SizedBox(height: 12),
-                            const Divider(),
-                            const SizedBox(height: 8),
-                            Text(
-                              q['answer'],
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'سوال و جواب' : 'Q & A',
+          isUrdu: isUrdu,
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: _qaList.isEmpty
+                ? EmptyStateWidget(
+                    icon: Icons.question_answer_outlined,
+                    title: isUrdu ? 'کوئی سوال نہیں' : 'No Q & A',
+                    subtitle: isUrdu ? 'ابھی تک کوئی سوال جواب نہیں' : 'No questions and answers yet.',
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _qaList.length,
+                    itemBuilder: (context, index) {
+                      final qa = _qaList[index];
+                      return Card(
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: ExpansionTile(
+                          title: Text(qa['question'], style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                          subtitle: Text(qa['date'], style: theme.textTheme.bodySmall),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text(qa['answer'], style: theme.textTheme.bodyMedium),
                             ),
                           ],
-                        ],
-                      ),
+                        ),
+                      );
+                    },
+                  ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+              ),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _questionController,
+                    decoration: InputDecoration(
+                      hintText: isUrdu ? 'سوال درج کریں' : 'Enter question...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
-                );
-              },
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _answerController,
+                    decoration: InputDecoration(
+                      hintText: isUrdu ? 'جواب درج کریں' : 'Enter answer...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _addQa,
+                      child: Text(isUrdu ? 'شامل کریں' : 'Add Q&A'),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAnswerDialog(Map<String, dynamic> q) {
-    final answerController = TextEditingController(text: q['answer']);
-    bool makePublic = false;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                q['question'],
-                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                label: _isUrdu ? 'آپ کا جواب' : 'Your Answer',
-                controller: answerController,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 8),
-              CheckboxListTile(
-                title: Text(_isUrdu ? 'عوامی بنائیں' : 'Make Public'),
-                value: makePublic,
-                onChanged: (v) => setState(() => makePublic = v!),
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-              const SizedBox(height: 16),
-              CustomButton(
-                label: _isUrdu ? 'جواب بھیجیں' : 'Submit Answer',
-                onPressed: () => Navigator.of(ctx).pop(),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
+          ],
         ),
       ),
     );

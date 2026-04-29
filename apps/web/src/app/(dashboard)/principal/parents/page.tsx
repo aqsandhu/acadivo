@@ -12,7 +12,7 @@ import { Select, SelectOption } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getParents } from "@/services/mockApi";
+import { useMockApi, getParents } from "@/services/apiClient";
 
 export default function PrincipalParentsPage() {
   const { t } = useTranslation();

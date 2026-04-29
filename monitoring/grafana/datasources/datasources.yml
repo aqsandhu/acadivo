@@ -13,3 +13,7 @@ datasources:
     access: proxy
     url: http://loki:3100
     editable: false
+    basicAuth: true
+    basicAuthUser: ${LOKI_USER:-loki}
+    secureJsonData:
+      basicAuthPassword: ${LOKI_PASSWORD}

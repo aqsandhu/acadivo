@@ -8,7 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockApi, getAdminStats, getTeachers, getStudents, getParents, getClasses, getFeeRecords } from "@/services/mockApi";
+import { useMockApi, getAdminStats, getTeachers, getStudents, getParents, getClasses, getFeeRecords } from "@/services/apiClient";
 import Link from "next/link";
 
 function StatCard({ label, value, icon, change }: { label: string; value: string | number; icon: React.ReactNode; change?: number }) {

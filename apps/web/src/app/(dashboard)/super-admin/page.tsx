@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getDashboardStats, getSchools, type DashboardStats, type School } from "@/services/mockApi";
+import { useMockApi, getDashboardStats, getSchools, type DashboardStats, type School } from "@/services/apiClient";
 import Link from "next/link";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,

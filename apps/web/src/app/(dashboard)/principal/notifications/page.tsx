@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getNotifications, type NotificationItem } from "@/services/mockApi";
+import { useMockApi, getNotifications, type NotificationItem } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 

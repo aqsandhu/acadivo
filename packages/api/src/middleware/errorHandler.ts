@@ -3,8 +3,8 @@
 // ─────────────────────────────────────────────
 
 import { Request, Response, NextFunction } from "express";
-import { ApiError } from "../lib/ApiError";
-import { ApiResponse } from "../lib/ApiResponse";
+import { ApiError } from "../utils/ApiError";
+import { ApiResponse } from "../utils/ApiResponse";
 
 export function globalErrorHandler(err: Error, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof ApiError) {

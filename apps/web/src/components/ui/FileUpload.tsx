@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Upload, X, File, FileText, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "./Button";
+import { Button } from "./button";
 
 export interface FileUploadProps {
   accept?: string;

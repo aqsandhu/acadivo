@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// Shared User Service — CRUD with Auto ID Generation
+// Shared User Service — CRUD with Atomic Auto ID Generation
 // ═══════════════════════════════════════════════════
 
 import { PrismaClient, User, UserRole, Prisma } from '@prisma/client';
@@ -36,16 +36,23 @@ export interface UpdateUserData {
   isActive?: boolean;
 }
 
-// ── Auto ID generation ──
+// ── Atomic ID generation ──
 
 const ROLE_PREFIX: Record<string, string> = {
-  PRINCIPAL: 'PRC',
-  ADMIN: 'ADM',
-  TEACHER: 'TCH',
-  STUDENT: 'STD',
+  SUPER_ADMIN: 'SA',
+  PRINCIPAL: 'PR',
+  ADMIN: 'AD',
+  TEACHER: 'TC',
+  STUDENT: 'STU',
   PARENT: 'PAR',
 };
 
+/**
+ * Atomically generate the next unique ID using a sequence counter.
+ * Uses Prisma transaction with raw query to prevent race conditions.
+ * Format: PREFIX-SCHOOLCODE-### (e.g., STU-SCH001-001)
+ * Student-Parent shared format: STU-SCHOOLCODE-### and PAR-SCHOOLCODE-###
+ */
 export async function generateUniqueId(
   prisma: PrismaClient,
   role: UserRole,
@@ -55,28 +62,49 @@ export async function generateUniqueId(
   const prefix = ROLE_PREFIX[role] || 'USR';
   const code = schoolCode || tenantId.slice(0, 6).toUpperCase();
 
-  let count = 0;
-  switch (role) {
-    case 'TEACHER':
-      count = await prisma.teacher.count({ where: { tenantId } });
-      break;
-    case 'STUDENT':
-      count = await prisma.student.count({ where: { tenantId } });
-      break;
-    case 'PARENT':
-      count = await prisma.parent.count({ where: { tenantId } });
-      break;
-    case 'ADMIN':
-      count = await prisma.schoolAdmin.count({ where: { tenantId } });
-      break;
-    case 'PRINCIPAL':
-      count = await prisma.principal.count({ where: { tenantId } });
-      break;
-    default:
-      count = await prisma.user.count({ where: { tenantId, role } });
-  }
+  // Use a transaction-level advisory lock + sequence query to prevent race conditions
+  return prisma.$transaction(async (tx) => {
+    // Acquire advisory lock for this tenant+role combination
+    const lockId = `uid_${tenantId}_${role}`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockId}))`;
 
-  return `${prefix}-${code}-${String(count + 1).padStart(3, '0')}`;
+    // Count existing users with this role in this tenant (excluding soft-deleted)
+    let count = 0;
+    switch (role) {
+      case 'TEACHER':
+        count = await tx.teacher.count({ where: { tenantId, user: { isActive: true } } });
+        break;
+      case 'STUDENT':
+        count = await tx.student.count({ where: { tenantId, status: 'ACTIVE' } });
+        break;
+      case 'PARENT':
+        count = await tx.parent.count({ where: { tenantId, user: { isActive: true } } });
+        break;
+      case 'ADMIN':
+        count = await tx.schoolAdmin.count({ where: { tenantId, user: { isActive: true } } });
+        break;
+      case 'PRINCIPAL':
+        count = await tx.principal.count({ where: { tenantId, user: { isActive: true } } });
+        break;
+      default:
+        count = await tx.user.count({ where: { tenantId, role, isActive: true } });
+    }
+
+    // Atomically increment a sequence stored in Redis for extra safety
+    let seq = count + 1;
+    try {
+      const { redis } = require('../../config/redis');
+      const redisSeq = await redis.incr(`seq:${tenantId}:${role}`);
+      if (redisSeq > seq) seq = redisSeq;
+      else await redis.set(`seq:${tenantId}:${role}`, seq);
+    } catch {
+      // Redis unavailable, fall back to count-based
+    }
+
+    return `${prefix}-${code}-${String(seq).padStart(3, '0')}`;
+  }, {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  });
 }
 
 // ── Create User ──

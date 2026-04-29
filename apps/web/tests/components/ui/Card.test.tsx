@@ -1,117 +1,88 @@
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { render } from '../test-utils';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
 
-const MockCard: React.FC<{
-  title?: string;
-  children: React.ReactNode;
-  footer?: React.ReactNode;
-  header?: React.ReactNode;
-  className?: string;
-  hover?: boolean;
-}> = ({ title, children, footer, header, className, hover }) => {
-  return (
-    <div
-      className={`card ${className || ''} ${hover ? 'card-hover' : ''}`}
-      data-testid="card"
-    >
-      {(header || title) && (
-        <div className="card-header" data-testid="card-header">
-          {header}
-          {title && <h3 data-testid="card-title">{title}</h3>}
-        </div>
-      )}
-      <div className="card-body" data-testid="card-body">
-        {children}
-      </div>
-      {footer && (
-        <div className="card-footer" data-testid="card-footer">
-          {footer}
-        </div>
-      )}
-    </div>
-  );
-};
-
-describe('Card Component', () => {
-  it('renders with content', () => {
-    render(<MockCard>Card content</MockCard>);
+describe('Card Component (Real)', () => {
+  it('renders Card with content', () => {
+    render(
+      <Card data-testid="card">
+        <CardContent>Card Body</CardContent>
+      </Card>
+    );
     expect(screen.getByTestId('card')).toBeInTheDocument();
-    expect(screen.getByText('Card content')).toBeInTheDocument();
+    expect(screen.getByText('Card Body')).toBeInTheDocument();
   });
 
-  it('renders with title', () => {
-    render(<MockCard title="Student Details">Content</MockCard>);
-    expect(screen.getByTestId('card-title')).toHaveTextContent('Student Details');
-  });
-
-  it('renders with header slot', () => {
+  it('renders full Card structure', () => {
     render(
-      <MockCard header={<span data-testid="custom-header">Custom Header</span>}>
-        Body
-      </MockCard>
+      <Card data-testid="full-card">
+        <CardHeader>
+          <CardTitle>Card Title</CardTitle>
+          <CardDescription>Card Description</CardDescription>
+        </CardHeader>
+        <CardContent>Card Content</CardContent>
+        <CardFooter>Card Footer</CardFooter>
+      </Card>
     );
-    expect(screen.getByTestId('custom-header')).toBeInTheDocument();
-    expect(screen.getByTestId('card-header')).toContainElement(screen.getByTestId('custom-header'));
+    expect(screen.getByText('Card Title')).toBeInTheDocument();
+    expect(screen.getByText('Card Description')).toBeInTheDocument();
+    expect(screen.getByText('Card Content')).toBeInTheDocument();
+    expect(screen.getByText('Card Footer')).toBeInTheDocument();
   });
 
-  it('renders with footer slot', () => {
+  it('applies custom className to Card', () => {
+    render(<Card className="custom-card" data-testid="styled-card">Styled</Card>);
+    expect(screen.getByTestId('styled-card')).toHaveClass('custom-card');
+  });
+
+  it('CardHeader renders with proper structure', () => {
     render(
-      <MockCard footer={<button data-testid="footer-btn">Action</button>}>
-        Body
-      </MockCard>
+      <Card>
+        <CardHeader data-testid="header">
+          <CardTitle>Title</CardTitle>
+        </CardHeader>
+      </Card>
     );
-    expect(screen.getByTestId('footer-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('card-footer')).toContainElement(screen.getByTestId('footer-btn'));
+    expect(screen.getByTestId('header')).toBeInTheDocument();
   });
 
-  it('renders with both header, body, and footer', () => {
+  it('CardContent renders children', () => {
     render(
-      <MockCard
-        title="Test Card"
-        header={<span data-testid="header-icon">Icon</span>}
-        footer={<span data-testid="footer-text">Footer</span>}
-      >
-        Main body content
-      </MockCard>
+      <Card>
+        <CardContent>
+          <p data-testid="paragraph">Paragraph</p>
+        </CardContent>
+      </Card>
     );
-    expect(screen.getByTestId('card-header')).toBeInTheDocument();
-    expect(screen.getByTestId('card-body')).toBeInTheDocument();
-    expect(screen.getByTestId('card-footer')).toBeInTheDocument();
-    expect(screen.getByText('Main body content')).toBeInTheDocument();
-  });
-
-  it('applies hover class', () => {
-    render(<MockCard hover>Hover card</MockCard>);
-    expect(screen.getByTestId('card')).toHaveClass('card-hover');
-  });
-
-  it('applies custom className', () => {
-    render(<MockCard className="custom-card">Custom</MockCard>);
-    expect(screen.getByTestId('card')).toHaveClass('custom-card');
-  });
-
-  it('renders without header when no title or header provided', () => {
-    render(<MockCard>No header card</MockCard>);
-    expect(screen.queryByTestId('card-header')).not.toBeInTheDocument();
-  });
-
-  it('renders without footer when not provided', () => {
-    render(<MockCard>No footer</MockCard>);
-    expect(screen.queryByTestId('card-footer')).not.toBeInTheDocument();
+    expect(screen.getByTestId('paragraph')).toBeInTheDocument();
   });
 
   it('renders complex nested content', () => {
     render(
-      <MockCard title="Students">
-        <ul data-testid="student-list">
-          <li>Ahmad Raza</li>
-          <li>Sana Malik</li>
-          <li>Bilal Khan</li>
-        </ul>
-      </MockCard>
+      <Card data-testid="complex-card">
+        <CardHeader>
+          <CardTitle>Student Profile</CardTitle>
+          <CardDescription>View student details</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div data-testid="student-name">John Doe</div>
+          <div data-testid="student-grade">Grade 10</div>
+        </CardContent>
+        <CardFooter>
+          <button>Action</button>
+        </CardFooter>
+      </Card>
     );
-    expect(screen.getByTestId('student-list')).toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getByTestId('complex-card')).toBeInTheDocument();
+    expect(screen.getByTestId('student-name')).toHaveTextContent('John Doe');
+    expect(screen.getByTestId('student-grade')).toHaveTextContent('Grade 10');
   });
 });

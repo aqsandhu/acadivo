@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockApi, getConversations, getMessages, type Conversation, type Message } from "@/services/mockApi";
+import { useMockApi, getConversations, getMessages, type Conversation, type Message } from "@/services/apiClient";
 
 export default function PrincipalMessagesPage() {
   const { t } = useTranslation();

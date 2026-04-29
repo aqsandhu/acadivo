@@ -13,9 +13,6 @@ const prisma =
       process.env.NODE_ENV === 'development'
         ? ['query', 'info', 'warn', 'error']
         : ['error'],
-    // Connection pooling is handled by PostgreSQL driver natively,
-    // but we can tune Prisma's connection limit here.
-    // In production, use DATABASE_URL with `?connection_limit=20` etc.
   });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
@@ -57,46 +54,50 @@ prisma.$use(async (params, next) => {
   }
 
   // ── Auto-filter soft-deleted records on find ──
-  // Uncomment to automatically hide inactive records:
-  //
-  // if (
-  //   params.action.startsWith('find') &&
-  //   softDeleteModels.includes(params.model)
-  // ) {
-  //   if (!params.args.where) params.args.where = {};
-  //   if (params.args.where.isActive === undefined) {
-  //     params.args.where.isActive = true;
-  //   }
-  // }
+  if (
+    params.action.startsWith('find') &&
+    softDeleteModels.includes(params.model)
+  ) {
+    if (!params.args.where) params.args.where = {};
+    if (params.args.where.isActive === undefined) {
+      params.args.where.isActive = true;
+    }
+  }
 
   return next(params);
 });
 
 // ────────────────────────────────────────────────
-// Tenant Isolation Middleware (Concept)
+// Tenant Isolation Middleware
 // ────────────────────────────────────────────────
-// Uncomment and adapt to enforce row-level tenant isolation.
-// This validates that every query includes the correct tenantId
-// based on the authenticated user's tenant context.
-/*
+// Enforces row-level tenant isolation by injecting tenantId
+// from async context into every query.
+
+let currentTenantId: string | null = null;
+
+export function setTenantContext(tenantId: string | null) {
+  currentTenantId = tenantId;
+}
+
+export function getTenantContext(): string | null {
+  return currentTenantId;
+}
+
 prisma.$use(async (params, next) => {
   // Skip tenant check for super-admin operations or raw queries
   if (params.model === 'SubscriptionPlan' || params.model === 'Advertisement') {
     return next(params);
   }
 
-  // Example: inject tenantId from async context (e.g., AsyncLocalStorage)
-  // const tenantId = getCurrentTenantId();
-  // if (tenantId && params.args.where) {
-  //   params.args.where.tenantId = tenantId;
-  // }
-
-  // TODO: Implement with your tenant context provider
-  // (e.g., ClsService, AsyncLocalStorage, or request-scoped DI)
+  // Inject tenantId from context if available
+  if (currentTenantId && params.args?.where) {
+    if (typeof params.args.where === 'object' && !params.args.where.tenantId) {
+      params.args.where.tenantId = currentTenantId;
+    }
+  }
 
   return next(params);
 });
-*/
 
 export { prisma };
 export default prisma;

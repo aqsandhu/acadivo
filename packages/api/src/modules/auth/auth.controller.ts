@@ -79,6 +79,19 @@ export const verify2FA = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json(successResponse(result, result.message));
 });
 
+export const disable2FA = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?.userId!;
+  const { code } = req.body;
+  const result = await authService.disable2FA(userId, code);
+  res.status(200).json(successResponse(result, result.message));
+});
+
+export const verify2FALogin = asyncHandler(async (req: Request, res: Response) => {
+  const { code, tempToken } = req.body;
+  const result = await authService.verify2FA("", code, tempToken);
+  res.status(200).json(successResponse(result, result.message));
+});
+
 export const getMe = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user?.userId!;
   const result = await authService.getProfile(userId);

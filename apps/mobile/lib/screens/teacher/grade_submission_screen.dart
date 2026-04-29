@@ -1,129 +1,155 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../widgets/loading_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_widget.dart';
+import '../../widgets/status_badge.dart';
 import '../../widgets/user_avatar.dart';
+import '../../routing/route_names.dart';
+
+import '../../services/teacher_service.dart';
+import '../../services/api_service.dart';
+import '../../models/student_model.dart';
 
 class GradeSubmissionScreen extends ConsumerStatefulWidget {
-  const GradeSubmissionScreen({super.key});
-
+  final String? classId;
+  const GradeSubmissionScreen({super.key, this.classId});
   @override
   ConsumerState<GradeSubmissionScreen> createState() => _GradeSubmissionScreenState();
 }
 
 class _GradeSubmissionScreenState extends ConsumerState<GradeSubmissionScreen> {
-  final _marksController = TextEditingController();
-  final _feedbackController = TextEditingController();
-  bool _isLoading = false;
-  bool _isUrdu = false;
-  final int _maxMarks = 20;
+  bool _isLoading = true;
+  String? _error;
+  List<StudentModel> _students = [];
+  Map<String, TextEditingController> _controllers = {};
+  final _formKey = GlobalKey<FormState>();
+  bool _submitting = false;
+  String _examType = 'midterm';
+  String _subjectId = '';
 
-  Future<void> _submitGrade() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() => _isLoading = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isUrdu ? 'درجہ بندی محفوظ ہو گئی' : 'Grade submitted successfully')),
-      );
+  @override
+  void initState() { super.initState(); _loadData(); }
+
+  Future<void> _loadData() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = TeacherService(api);
+      final students = await service.getClassStudents(widget.classId ?? '');
+      setState(() {
+        _students = students;
+        for (var s in students) {
+          _controllers[s.id] = TextEditingController();
+        }
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _submitting = true);
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = TeacherService(api);
+      final marksData = _students.map((s) => {
+        'studentId': s.id,
+        'marksObtained': double.tryParse(_controllers[s.id]!.text) ?? 0,
+        'examType': _examType,
+        'subjectId': _subjectId,
+      }).toList();
+      await service.uploadMarks(marksData);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ref.read(isRtlProvider) ? 'نمبرز محفوظ ہو گئے' : 'Marks saved successfully')),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _submitting = false);
     }
   }
 
   @override
+  void dispose() {
+    for (var c in _controllers.values) { c.dispose(); }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: _isUrdu ? 'جمع کروائی کا درجہ' : 'Grade Submission',
-        isUrdu: _isUrdu,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const UserAvatar(name: 'Ahmad Ali', size: 56),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Ahmad Ali', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                        Text('Roll: 101 | Class 8-A', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            _isUrdu ? 'جمع کروائی' : 'Submission',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              'Here is my completed algebra homework. I have solved all 20 problems and attached the working.',
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            children: [
-              Chip(
-                avatar: const Icon(Icons.picture_as_pdf, size: 18),
-                label: const Text('homework.pdf'),
-              ),
-              Chip(
-                avatar: const Icon(Icons.image, size: 18),
-                label: const Text('working.jpg'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Text(
-            _isUrdu ? 'درجہ بندی' : 'Grading',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
-          CustomTextField(
-            label: _isUrdu ? 'نمبر ($_maxMarks میں سے)' : 'Marks (out of $_maxMarks)',
-            controller: _marksController,
-            keyboardType: TextInputType.number,
-            prefixIcon: const Icon(Icons.score_outlined),
-          ),
-          const SizedBox(height: 16),
-          CustomTextField(
-            label: _isUrdu ? 'تاثرات' : 'Feedback',
-            controller: _feedbackController,
-            maxLines: 4,
-            hint: _isUrdu ? 'تاثرات لکھیں...' : 'Write feedback...',
-          ),
-          const SizedBox(height: 24),
-          CustomButton(
-            label: _isUrdu ? 'درجہ بندی جمع کرائیں' : 'Submit Grade',
-            isLoading: _isLoading,
-            onPressed: _submitGrade,
-          ),
-          const SizedBox(height: 32),
-        ],
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: isUrdu ? 'نمبرز درج کریں' : 'Submit Marks',
+          isUrdu: isUrdu,
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _submitting ? null : _submit,
+          icon: const Icon(Icons.save),
+          label: Text(isUrdu ? 'محفوظ کریں' : 'Save'),
+        ),
+        body: _isLoading && _students.isEmpty
+            ? const Center(child: LoadingWidget())
+            : _error != null && _students.isEmpty
+                ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                : _students.isEmpty
+                    ? EmptyStateWidget(
+                        icon: Icons.people_outline,
+                        title: isUrdu ? 'کوئی طالب علم نہیں' : 'No Students',
+                        subtitle: isUrdu ? 'اس کلاس میں کوئی طالب علم نہیں' : 'No students in this class.',
+                      )
+                    : Form(
+                        key: _formKey,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _students.length,
+                          itemBuilder: (context, index) {
+                            final s = _students[index];
+                            final controller = _controllers[s.id];
+                            return Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                leading: UserAvatar(name: s.name, size: 40),
+                                title: Text(s.name, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                subtitle: Text(s.uniqueId ?? ''),
+                                trailing: SizedBox(
+                                  width: 80,
+                                  child: TextFormField(
+                                    controller: controller,
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    decoration: InputDecoration(
+                                      hintText: isUrdu ? 'نمبر' : 'Marks',
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                    ),
+                                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
       ),
     );
   }

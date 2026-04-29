@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getStudents, type Student } from "@/services/mockApi";
+import { useMockApi, getStudents, type Student } from "@/services/apiClient";
 
 export default function PrincipalStudentsPage() {
   const { t } = useTranslation();

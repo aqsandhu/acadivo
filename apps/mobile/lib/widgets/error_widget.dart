@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class CustomErrorWidget extends StatelessWidget {
+class AppErrorWidget extends StatelessWidget {
   final String message;
   final String? retryLabel;
   final VoidCallback? onRetry;

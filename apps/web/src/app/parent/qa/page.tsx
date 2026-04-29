@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/mockApi";
+import { mockApi } from "@/services/apiClient";
 import type { QAItem, ChildProfile } from "@/types";
 import { HelpCircle, MessageCircle } from "lucide-react";
 
@@ -53,7 +53,13 @@ export default function ParentQAPage() {
               </div>
               <div>
                 <Label>Teacher</Label>
-                <Select><SelectItem value="TCH-001">Ahmed Hassan</SelectItem></Select>
+                <Select>
+                  <SelectItem value="">Select a teacher</SelectItem>
+                  {items.filter((i) => i.teacherId && i.teacherName)
+                    .map((i) => ({ id: i.teacherId!, name: i.teacherName! }))
+                    .filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
+                    .map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </Select>
               </div>
               <Textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Type your question..." rows={3} />
               <Button onClick={ask}><HelpCircle className="h-4 w-4 mr-2" /> Send Question</Button>

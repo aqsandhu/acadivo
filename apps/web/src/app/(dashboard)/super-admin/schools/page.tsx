@@ -19,7 +19,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { useMockApi, getSchools, createSchool, updateSchool, deleteSchool, type School } from "@/services/mockApi";
+import { useMockApi, getSchools, createSchool, updateSchool, deleteSchool, type School } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
