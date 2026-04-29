@@ -1,0 +1,64 @@
+# =============================================================================
+# Dockerfile.socket — Acadivo Socket.io Real-time Server
+# Multi-stage build with Redis adapter, tini init, health checks
+# =============================================================================
+
+# ── Stage 1: Dependencies ────────────────────────────────────────────────────
+FROM node:20-alpine AS deps
+WORKDIR /app
+
+RUN apk add --no-cache libc6-compat
+
+COPY package.json turbo.json ./
+COPY packages/socket/package.json packages/socket/
+COPY packages/shared/package.json packages/shared/
+
+RUN npm ci
+
+# ── Stage 2: Builder ───────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+RUN apk add --no-cache libc6-compat
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/socket/node_modules ./packages/socket/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+
+COPY packages/socket ./packages/socket
+COPY packages/shared ./packages/shared
+COPY turbo.json package.json ./
+
+RUN cd packages/socket && npm run build
+
+# ── Stage 3: Production Runner ────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=5001
+
+# Install tini + curl for health checks
+RUN apk add --no-cache tini curl
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 socket
+
+# Copy built artifacts
+COPY --from=builder --chown=socket:nodejs /app/packages/socket/dist ./dist
+COPY --from=builder --chown=socket:nodejs /app/packages/socket/package.json ./
+COPY --from=builder --chown=socket:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=socket:nodejs /app/packages/socket/node_modules ./node_modules_socket
+
+USER socket
+
+EXPOSE 5001
+
+# Health check — verify socket server is running
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -fs http://localhost:5001/health || exit 1
+
+# Use tini for proper signal handling (PID 1 management)
+ENTRYPOINT ["tini", "--"]
+CMD ["node", "dist/index.js"]

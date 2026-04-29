@@ -1,0 +1,134 @@
+name: acadivo
+version: 1.0.0+1
+publish_to: "none"
+description: Acadivo Flutter 3.x Mobile Application
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  hooks_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.0.0
+
+  # HTTP Client
+  dio: ^5.4.1
+
+  # Socket.io
+  socket_io_client: ^2.0.3
+
+  # Firebase
+  firebase_core: ^2.30.1
+  firebase_messaging: ^14.9.1
+
+  # Local Storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.2.2
+
+  # Notifications
+  flutter_local_notifications: ^17.0.0
+
+  # Internationalization
+  intl: ^0.19.0
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Charts & Calendar
+  fl_chart: ^0.68.0
+  table_calendar: ^3.0.9
+
+  # PDF Viewer
+  syncfusion_flutter_pdfviewer: ^25.1.38
+
+  # Media / File Picker
+  image_picker: ^1.1.0
+  file_picker: ^8.0.0
+
+  # Permissions & Connectivity
+  permission_handler: ^11.3.1
+  connectivity_plus: ^6.0.0
+
+  # Environment & Config
+  flutter_dotenv: ^5.1.0
+
+  # Encryption (token storage)
+  flutter_secure_storage: ^9.0.0
+
+  # Package Info
+  package_info_plus: ^7.0.0
+  device_info_plus: ^9.1.0
+
+  # Utils
+  equatable: ^2.0.5
+  uuid: ^4.4.0
+  path_provider: ^2.1.2
+  logger: ^2.2.0
+  dartz: ^0.10.1
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
+  flutter_svg: ^2.0.10
+
+  # UI
+  cupertino_icons: ^1.0.6
+
+  # Deps override to avoid conflicts
+dependency_overrides:
+  win32: ^5.5.0
+  webview_flutter: ^4.7.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.2
+  build_runner: ^2.4.8
+  hive_generator: ^2.0.1
+  riverpod_generator: ^2.4.0
+  custom_lint: ^0.6.2
+  riverpod_lint: ^2.3.10
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/fonts/
+    - assets/languages/en.json
+    - assets/languages/ur.json
+    - .env
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+    - family: NotoNastaliqUrdu
+      fonts:
+        - asset: assets/fonts/NotoNastaliqUrdu-Regular.ttf
+        - asset: assets/fonts/NotoNastaliqUrdu-Bold.ttf
+          weight: 700
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/app_icon_fg.png"
