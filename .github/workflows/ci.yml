@@ -1,0 +1,423 @@
+# =============================================================================
+# Acadivo — Main CI Pipeline
+# Triggers: push/PR to main, develop branches
+# Strategy: fail-fast (lint → typecheck → test → build)
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_ENV: test
+  TURBO_TELEMETRY_DISABLED: 1
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  # ── 1. Lint & Format Check ───────────────────────────────────────────────
+  lint:
+    name: Lint & Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Prettier check
+        run: npx prettier --check "**/*.{ts,tsx,js,jsx,json,md,yaml,yml}"
+
+  # ── 2. TypeScript Type Check ───────────────────────────────────────────────
+  typecheck:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: true
+      matrix:
+        package: [api, web, socket, shared]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check ${{ matrix.package }}
+        run: npx tsc --noEmit -p packages/${{ matrix.package }}/tsconfig.json
+
+  # ── 3. API Tests ───────────────────────────────────────────────────────────
+  test-api:
+    name: API Tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    strategy:
+      fail-fast: true
+      matrix:
+        node: [20.x, 21.x]
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: acadivo
+          POSTGRES_PASSWORD: acadivo_test
+          POSTGRES_DB: acadivo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://acadivo:acadivo_test@localhost:5432/acadivo_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: test-jwt-secret-key-not-for-production
+      JWT_REFRESH_SECRET: test-jwt-refresh-secret-key-not-for-production
+      NODE_ENV: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=packages/api/prisma/schema.prisma
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy --schema=packages/api/prisma/schema.prisma
+
+      - name: Run API unit & integration tests
+        run: cd packages/api && npm run test:ci
+
+      - name: Upload API test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results-node${{ matrix.node }}
+          path: packages/api/coverage/
+          retention-days: 7
+
+  # ── 4. Web Tests ───────────────────────────────────────────────────────────
+  test-web:
+    name: Web Tests (Node 20)
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run web component tests
+        run: cd apps/web && npm run test:unit -- --coverage
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E tests
+        run: cd apps/web && npm run test:e2e
+        env:
+          API_URL: http://localhost:5000
+          NEXT_PUBLIC_API_URL: http://localhost:5000
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+      - name: Upload web coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-coverage
+          path: apps/web/coverage/
+          retention-days: 7
+
+  # ── 5. Socket Tests ──────────────────────────────────────────────────────────
+  test-socket:
+    name: Socket.io Tests
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Socket.io tests
+        run: cd packages/socket && npm run test:ci
+
+      - name: Upload socket coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: socket-coverage
+          path: packages/socket/coverage/
+          retention-days: 7
+
+  # ── 6. Build API ─────────────────────────────────────────────────────────────
+  build-api:
+    name: Build API
+    runs-on: ubuntu-latest
+    needs: [test-api]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=packages/api/prisma/schema.prisma
+
+      - name: Build API package
+        run: cd packages/api && npm run build
+
+      - name: Upload API build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-build
+          path: packages/api/dist/
+          retention-days: 3
+
+  # ── 7. Build Web ───────────────────────────────────────────────────────────
+  build-web:
+    name: Build Next.js Web
+    runs-on: ubuntu-latest
+    needs: [test-web]
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:5000
+      NEXT_PUBLIC_SOCKET_URL: http://localhost:5001
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js (static export)
+        run: cd apps/web && npm run build
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: apps/web/dist/
+          retention-days: 3
+
+  # ── 8. Build Socket ──────────────────────────────────────────────────────────
+  build-socket:
+    name: Build Socket Server
+    runs-on: ubuntu-latest
+    needs: [test-socket]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Socket server
+        run: cd packages/socket && npm run build
+
+      - name: Upload socket build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: socket-build
+          path: packages/socket/dist/
+          retention-days: 3
+
+  # ── 9. Build Mobile (Flutter) ──────────────────────────────────────────────
+  build-mobile:
+    name: Build Flutter Mobile
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, 'mobile') || contains(github.event.pull_request.changed_files, 'apps/mobile') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: stable
+          cache: true
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+        working-directory: apps/mobile
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+        working-directory: apps/mobile
+
+      - name: Analyze Flutter code
+        run: flutter analyze --fatal-infos
+        working-directory: apps/mobile
+
+      - name: Run Flutter tests
+        run: flutter test
+        working-directory: apps/mobile
+
+      - name: Build APK
+        run: flutter build apk --release
+        working-directory: apps/mobile
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-apk
+          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
+
+  # ── 10. Security Audit ───────────────────────────────────────────────────────
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+  # ── 11. Coverage Upload ──────────────────────────────────────────────────────
+  coverage:
+    name: Upload Coverage to Codecov
+    runs-on: ubuntu-latest
+    needs: [test-api, test-web, test-socket]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: coverage-reports
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: coverage-reports
+          fail_ci_if_error: true
+          verbose: true
