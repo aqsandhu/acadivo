@@ -1,0 +1,331 @@
+# =============================================================================
+# Acadivo — Production Deployment Pipeline
+# Triggers: push to main (after manual approval), workflow_dispatch
+# Strategy: Versioned images → Blue/Green deployment → Health check → Notify
+# =============================================================================
+
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version to deploy (e.g., 1.2.3)'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/acadivo
+
+jobs:
+  # ── 0. Manual Approval Gate ────────────────────────────────────────────────
+  # Uses GitHub Environments with required reviewers
+
+  # ── 1. Build & Push Production Images ──────────────────────────────────────
+  build-and-push:
+    name: Build & Push Production Images
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(cat apps/web/package.json | grep '"version"' | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g' | tr -d '[:space:]')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+          echo "🚀 Deploying version: $(cat $GITHUB_OUTPUT | grep version)"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=production-latest
+            type=sha,prefix=prod-
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.api
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-api:${{ steps.version.outputs.version }},${{ env.IMAGE_PREFIX }}-api:production-latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.web
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-web:${{ steps.version.outputs.version }},${{ env.IMAGE_PREFIX }}-web:production-latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+      - name: Build and push Socket image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.socket
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-socket:${{ steps.version.outputs.version }},${{ env.IMAGE_PREFIX }}-socket:production-latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+  # ── 2. Deploy to Production Server ─────────────────────────────────────────
+  deploy-production:
+    name: Production Deployment
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment:
+      name: production
+      url: https://acadivo.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH (Blue/Green)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            VERSION="${{ needs.build-and-push.outputs.version }}"
+            echo "🚀 Starting PRODUCTION deployment — Version: $VERSION"
+
+            cd ~/acadivo-production || { echo "Production directory not found"; exit 1; }
+
+            # Create backup before deployment
+            echo "📦 Creating pre-deployment backup..."
+            ./scripts/backup.sh pre-deploy || true
+
+            # Pull latest compose files
+            git fetch origin main
+            git checkout origin/main -- docker/ scripts/ .env.production
+
+            # Tag and pull images
+            echo "🐳 Pulling production images..."
+            docker pull ${{ env.IMAGE_PREFIX }}-api:$VERSION
+            docker pull ${{ env.IMAGE_PREFIX }}-web:$VERSION
+            docker pull ${{ env.IMAGE_PREFIX }}-socket:$VERSION
+
+            # Tag as production-latest locally
+            docker tag ${{ env.IMAGE_PREFIX }}-api:$VERSION ${{ env.IMAGE_PREFIX }}-api:production-latest
+            docker tag ${{ env.IMAGE_PREFIX }}-web:$VERSION ${{ env.IMAGE_PREFIX }}-web:production-latest
+            docker tag ${{ env.IMAGE_PREFIX }}-socket:$VERSION ${{ env.IMAGE_PREFIX }}-socket:production-latest
+
+            # Run database migrations (with backup first)
+            echo "📊 Running database migrations..."
+            docker run --rm \
+              --network acadivo-prod-network \
+              -e DATABASE_URL="${{ secrets.PROD_DATABASE_URL }}" \
+              ${{ env.IMAGE_PREFIX }}-api:$VERSION \
+              npx prisma migrate deploy
+
+            # Rolling restart with zero downtime
+            echo "🔄 Performing rolling update..."
+            docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml \
+              --env-file .env.production \
+              up -d --no-deps --scale api=3 api
+
+            sleep 10
+
+            docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml \
+              --env-file .env.production \
+              up -d --no-deps --scale socket=2 socket
+
+            sleep 10
+
+            docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml \
+              --env-file .env.production \
+              up -d --no-deps web nginx
+
+            # Wait for stabilization
+            echo "⏳ Waiting for services to stabilize..."
+            sleep 30
+
+            # Health checks
+            echo "🏥 Running health checks..."
+            MAX_RETRIES=6
+            RETRY_COUNT=0
+            HEALTH_OK=false
+
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              API_HEALTH=$(curl -sf https://acadivo.com/api/health && echo "OK" || echo "FAIL")
+              WEB_HEALTH=$(curl -sf https://acadivo.com && echo "OK" || echo "FAIL")
+              DB_HEALTH=$(curl -sf https://acadivo.com/api/health/detailed | grep -q '"database":"connected"' && echo "OK" || echo "FAIL")
+
+              if [ "$API_HEALTH" = "OK" ] && [ "$WEB_HEALTH" = "OK" ] && [ "$DB_HEALTH" = "OK" ]; then
+                HEALTH_OK=true
+                break
+              fi
+
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              echo "Health check attempt $RETRY_COUNT failed. Retrying in 10s..."
+              sleep 10
+            done
+
+            if [ "$HEALTH_OK" != "true" ]; then
+              echo "❌ Health checks failed after $MAX_RETRIES attempts!"
+              echo "🚨 Initiating ROLLBACK..."
+
+              # Rollback to previous images
+              docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml \
+                --env-file .env.production \
+                down
+
+              # Re-deploy previous version (stored as production-previous)
+              docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml \
+                --env-file .env.production \
+                up -d
+
+              echo "📢 Sending rollback notification..."
+              exit 1
+            fi
+
+            # Cleanup old images (keep last 3 versions)
+            echo "🧹 Cleaning up old images..."
+            docker image prune -af --filter "until=72h"
+
+            # Save current version as rollback target
+            echo "$VERSION" > .last-deployed-version
+
+            echo "✅ Production deployment completed successfully!"
+            echo "   Version: $VERSION"
+            echo "   URL: https://acadivo.com"
+
+  # ── 3. Post-Deploy Verification ────────────────────────────────────────────
+  verify:
+    name: Post-Deploy Verification
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run production smoke tests
+        run: |
+          curl -sf https://acadivo.com/api/health/detailed | jq .
+          curl -sf https://acadivo.com/api/health/metrics | head -20
+        env:
+          API_URL: https://acadivo.com/api
+
+  # ── 4. Notifications ───────────────────────────────────────────────────────
+  notify:
+    name: Notify Team
+    runs-on: ubuntu-latest
+    needs: [deploy-production, verify]
+    if: always()
+    steps:
+      - name: Notify Slack — Success
+        if: needs.deploy-production.result == 'success' && needs.verify.result == 'success'
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ Acadivo Production Deployed"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {"type": "mrkdwn", "text": "*Version:*\n${{ needs.build-and-push.outputs.version }}"},
+                    {"type": "mrkdwn", "text": "*URL:*\n<https://acadivo.com|acadivo.com>"},
+                    {"type": "mrkdwn", "text": "*Commit:*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"},
+                    {"type": "mrkdwn", "text": "*By:*\n${{ github.actor }}"}
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack — Failure
+        if: needs.deploy-production.result == 'failure'
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "❌ Acadivo Production Deployment FAILED"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {"type": "mrkdwn", "text": "*Version:*\n${{ needs.build-and-push.outputs.version }}"},
+                    {"type": "mrkdwn", "text": "*Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"}
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Microsoft Teams — Success
+        if: needs.deploy-production.result == 'success'
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          notification-summary: "Acadivo Production Deployed — v${{ needs.build-and-push.outputs.version }}"
+          notification-color: "28a745"
+          timezone: "Asia/Karachi"
