@@ -5,6 +5,7 @@
 
 import admin from "firebase-admin";
 import { prisma } from "../config/database";
+import { redis } from "../config/redis";
 import { logger } from "../utils/logger";
 
 let firebaseInitialized = false;
@@ -42,7 +43,6 @@ export async function registerFCMToken(userId: string, token: string, deviceType
   initFirebase();
 
   // Store in Redis for quick lookup (primary storage for FCM tokens)
-  const { redis } = require("../config/redis");
   await redis.setex(`fcm:${userId}`, 30 * 24 * 60 * 60, JSON.stringify({ token, deviceType, registeredAt: new Date().toISOString() }));
 
   logger.info(`[Push] FCM token registered for user ${userId}`);
@@ -64,7 +64,6 @@ export async function sendPushNotification(userId: string, payload: {
     return { sent: false, reason: "Firebase not configured" };
   }
 
-  const { redis } = require("../config/redis");
   const tokenData = await redis.get(`fcm:${userId}`);
   if (!tokenData) {
     logger.warn(`[Push] No FCM token found for user ${userId}`);
@@ -121,7 +120,6 @@ export async function sendPushNotification(userId: string, payload: {
  * Clean up stale FCM tokens.
  */
 export async function cleanupStaleTokens(userIds?: string[]) {
-  const { redis } = require("../config/redis");
   if (userIds && userIds.length > 0) {
     for (const userId of userIds) {
       await redis.del(`fcm:${userId}`);

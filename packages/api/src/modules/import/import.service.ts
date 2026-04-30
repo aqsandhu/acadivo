@@ -19,11 +19,21 @@ export interface ParentImportRow {
   emergencyContact?: string;
 }
 
+function generateRandomPassword(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+  let pwd = "";
+  for (let i = 0; i < 12; i++) {
+    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pwd;
+}
+
 export async function importParents(
   tenantId: string,
   rows: ParentImportRow[],
-  defaultPassword: string = "Acadivo@123"
+  defaultPassword?: string
 ) {
+  const fallbackPassword = defaultPassword || generateRandomPassword();
   const result = {
     success: true,
     totalRows: rows.length,
@@ -67,7 +77,7 @@ export async function importParents(
       });
 
       if (!parentUser) {
-        const passwordHash = await hashPassword(defaultPassword);
+        const passwordHash = await hashPassword(fallbackPassword);
         const uniqueId = `PRT-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
         parentUser = await prisma.user.create({

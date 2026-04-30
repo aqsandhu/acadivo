@@ -22,7 +22,14 @@ import 'widgets/error_boundary_widget.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
-  await Firebase.initializeApp();
+
+  // Initialize Firebase safely - won't crash if config files are missing
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('[Firebase] Initialization skipped or failed: $e');
+    debugPrint('[Firebase] To enable push notifications, add google-services.json (Android) and GoogleService-Info.plist (iOS)');
+  }
   await Hive.initFlutter();
   await LocalStorage.init();
   await Preferences.init();

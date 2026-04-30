@@ -233,16 +233,17 @@ export async function loginUser(dto: LoginDTO) {
       }
 
       if (!matched) {
-        // Increment login attempts for ALL candidates with shared uniqueId
-        // to prevent brute-forcing either account
-        for (const candidate of candidates) {
-          const updatedAttempts = candidate.loginAttempts + 1;
-          const lockUntil = updatedAttempts >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : null;
-          await prisma.user.update({
-            where: { id: candidate.id },
-            data: { loginAttempts: updatedAttempts, lockUntil },
-          });
-        }
+        // Increment login attempts for only the candidate with most attempts
+        // to prevent mass-locking shared uniqueId accounts
+        const target = candidates.reduce((prev, curr) =>
+          prev.loginAttempts >= curr.loginAttempts ? prev : curr
+        );
+        const updatedAttempts = target.loginAttempts + 1;
+        const lockUntil = updatedAttempts >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : null;
+        await prisma.user.update({
+          where: { id: target.id },
+          data: { loginAttempts: updatedAttempts, lockUntil },
+        });
         throw ApiError.unauthorized("Invalid credentials", "INVALID_CREDENTIALS");
       }
     }
@@ -481,8 +482,8 @@ export async function setup2FA(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw ApiError.notFound("User not found", "USER_NOT_FOUND");
 
-  const { authenticator } = require("otplib");
-  const QRCode = require("qrcode");
+  const { authenticator } = await import("otplib");
+  const { default: QRCode } = await import("qrcode");
 
   const secret = authenticator.generateSecret();
   await prisma.user.update({
@@ -516,7 +517,7 @@ export async function verify2FA(userId: string, code: string, tempToken?: string
   const user = await prisma.user.findUnique({ where: { id: targetUserId } });
   if (!user || !user.twoFactorSecret) throw ApiError.badRequest("2FA not set up", "2FA_NOT_SETUP");
 
-  const { authenticator } = require("otplib");
+  const { authenticator } = await import("otplib");
   const isValid = authenticator.verify({ token: code, secret: user.twoFactorSecret });
   if (!isValid) {
     throw ApiError.badRequest("Invalid 2FA code", "INVALID_2FA_CODE");
@@ -550,7 +551,7 @@ export async function disable2FA(userId: string, code: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || !user.twoFactorSecret) throw ApiError.badRequest("2FA not set up", "2FA_NOT_SETUP");
 
-  const { authenticator } = require("otplib");
+  const { authenticator } = await import("otplib");
   const isValid = authenticator.verify({ token: code, secret: user.twoFactorSecret });
   if (!isValid) {
     throw ApiError.badRequest("Invalid 2FA code", "INVALID_2FA_CODE");

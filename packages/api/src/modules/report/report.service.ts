@@ -187,8 +187,17 @@ export async function generateReport(
     throw ApiError.internal(`PDF generation failed: ${err.message}`, "PDF_GENERATION_FAILED");
   }
 
-  // Store PDF to a placeholder URL (in production, upload to cloud storage)
-  const pdfUrl = `https://storage.acadivo.com/reports/${requestId}.pdf`;
+  // Upload PDF to Cloudinary
+  let pdfUrl: string;
+  try {
+    pdfUrl = await uploadToCloudinary(
+      { buffer: pdfBuffer, mimetype: "application/pdf", originalname: `report-${requestId}.pdf` } as any,
+      `acadivo/reports/${tenantId}`
+    );
+  } catch (uploadErr: any) {
+    logger.error(`[Report] Cloudinary upload failed for request ${requestId}: ${uploadErr.message}`);
+    throw ApiError.internal("Failed to upload report PDF", "PDF_UPLOAD_FAILED");
+  }
 
   // Update request
   const updated = await prisma.reportRequest.update({
@@ -471,91 +480,6 @@ function getBehaviorRating(attendancePercentage: string): string {
   if (pct >= 75) return "Satisfactory";
   return "Needs Improvement";
 }
-.logo ? `<img src="${tenant.logo}" alt="School Logo" style="max-height:60px;margin-bottom:10px;" />` : ""}
-      <h1>${tenant?.name || "School Name"}</h1>
-      <p>${tenant?.address || ""}${tenant?.city ? `, ${tenant.city}` : ""}</p>
-      <p>Phone: ${tenant?.phone || "N/A"}</p>
-      <h2 style="margin-top:15px;color:#27ae60;">Student Progress Report</h2>
-    </div>
-
-    <div class="student-info">
-      <div class="student-photo">
-        ${student.user.avatar ? `<img src="${student.user.avatar}" style="width:100%;height:100%;object-fit:cover;" />` : "No Photo"}
-      </div>
-      <div class="info-grid">
-        <div class="info-row"><span class="info-label">Name:</span> ${student.user.firstName} ${student.user.lastName}</div>
-        <div class="info-row"><span class="info-label">Class:</span> ${student.class?.name || "N/A"}</div>
-        <div class="info-row"><span class="info-label">Roll No:</span> ${student.rollNumber}</div>
-        <div class="info-row"><span class="info-label">Section:</span> ${student.section?.name || "N/A"}</div>
-      </div>
-    </div>
-
-    <div class="section-title">Academic Performance</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Subject</th><th>Total Marks</th><th>Obtained</th><th>Percentage</th><th>Grade</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${subjectRows}
-        ${result ? `
-        <tr style="font-weight:bold;background:#ecf0f1;">
-          <td style="padding:8px;border:1px solid #ddd;">Overall</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.totalMarks}</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.obtainedMarks}</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.percentage}%</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.grade}</td>
-        </tr>` : `<tr><td colspan="5" style="padding:8px;border:1px solid #ddd;text-align:center;">No result data available</td></tr>`}
-      </tbody>
-    </table>
-
-    <div class="section-title">Attendance Summary</div>
-    <div class="attendance-box">
-      <div class="att-item"><div class="count">${attendance.presentCount}</div><div class="label">Present</div></div>
-      <div class="att-item"><div class="count">${attendance.absentCount}</div><div class="label">Absent</div></div>
-      <div class="att-item"><div class="count">${attendance.lateCount}</div><div class="label">Late</div></div>
-      <div class="att-item"><div class="count">${attendance.leaveCount}</div><div class="label">Leave</div></div>
-      <div class="att-item"><div class="count">${attendance.attendancePercentage}%</div><div class="label">Rate</div></div>
-    </div>
-
-    <div class="section-title">Behavior Assessment</div>
-    <div class="behavior-box">
-      <p><strong>Rating:</strong> ${behaviorRating}</p>
-      <p><strong>Attendance Impact:</strong> ${attendance.attendancePercentage}% attendance rate</p>
-    </div>
-
-    <div class="section-title">Teacher Comments</div>
-    <div class="comments-box">${teacherRemarks || "No comments provided."}</div>
-
-    <div class="section-title">Principal Comments</div>
-    <div class="comments-box">${principalRemarks || "No comments provided."}</div>
-
-    <div class="signature-area">
-      <div class="signature-box">
-        <div class="signature-line">Class Teacher</div>
-      </div>
-      <div class="signature-box">
-        <div class="signature-line">Principal</div>
-      </div>
-    </div>
-
-    <div class="footer">
-      Report generated on ${new Date().toLocaleDateString("en-PK")} via Acadivo
-    </div>
-  </div>
-</body>
-</html>`;
-}
-
-function getBehaviorRating(attendancePercentage: string): string {
-  const pct = parseFloat(attendancePercentage);
-  if (pct >= 95) return "Excellent";
-  if (pct >= 85) return "Good";
-  if (pct >= 75) return "Satisfactory";
-  return "Needs Improvement";
-}
-
 // ──────────────────────────────────────────────
 // Progress Report HTML Builder
 // ──────────────────────────────────────────────

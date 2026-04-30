@@ -9,8 +9,8 @@ import { AsyncLocalStorage } from 'async_hooks';
 
 const tenantStorage = new AsyncLocalStorage<string | null>();
 
-export function setTenantContext(tenantId: string | null) {
-  tenantStorage.enterWith(tenantId);
+export function runWithTenant<T>(tenantId: string | null, fn: () => Promise<T>): Promise<T> {
+  return tenantStorage.run(tenantId, fn);
 }
 
 export function getTenantContext(): string | null {

@@ -4,10 +4,12 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/storage_keys.dart';
+import 'secure_storage.dart';
 
 class Preferences {
   static Preferences? _instance;
   late final SharedPreferences _prefs;
+  final SecureStorage _secureStorage = SecureStorage();
 
   Preferences._(this._prefs);
 
@@ -23,58 +25,87 @@ class Preferences {
     _instance = Preferences._(prefs);
   }
 
-  // Token
+  // Token — NOW STORED IN SECURE STORAGE
   Future<void> setToken(String token) async {
-    await _prefs.setString(StorageKeys.authToken, token);
+    await _secureStorage.setToken(token);
   }
 
-  String? getToken() {
-    return _prefs.getString(StorageKeys.authToken);
-  }
-
-  // Refresh Token
-  Future<void> setRefreshToken(String token) async {
-    await _prefs.setString(StorageKeys.refreshToken, token);
-  }
-
-  String? getRefreshToken() {
-    return _prefs.getString(StorageKeys.refreshToken);
-  }
-
-  // User Data
-  Future<void> setUserData(Map<String, dynamic> data) async {
-    await _prefs.setString(StorageKeys.userData, jsonEncode(data));
-  }
-
-  Map<String, dynamic>? getUserData() {
-    final data = _prefs.getString(StorageKeys.userData);
-    if (data == null) return null;
-    try {
-      return jsonDecode(data) as Map<String, dynamic>;
-    } catch (_) {
-      return null;
+  Future<String?> getToken() async {
+    // Migrate from old SharedPreferences if exists
+    final legacyToken = _prefs.getString(StorageKeys.authToken);
+    if (legacyToken != null) {
+      await _secureStorage.setToken(legacyToken);
+      await _prefs.remove(StorageKeys.authToken);
+      return legacyToken;
     }
+    return await _secureStorage.getToken();
   }
 
-  // School ID
+  // Refresh Token — NOW STORED IN SECURE STORAGE
+  Future<void> setRefreshToken(String token) async {
+    await _secureStorage.setRefreshToken(token);
+  }
+
+  Future<String?> getRefreshToken() async {
+    // Migrate from old SharedPreferences if exists
+    final legacyToken = _prefs.getString(StorageKeys.refreshToken);
+    if (legacyToken != null) {
+      await _secureStorage.setRefreshToken(legacyToken);
+      await _prefs.remove(StorageKeys.refreshToken);
+      return legacyToken;
+    }
+    return await _secureStorage.getRefreshToken();
+  }
+
+  // User Data — NOW STORED IN SECURE STORAGE
+  Future<void> setUserData(Map<String, dynamic> data) async {
+    await _secureStorage.write(StorageKeys.userData, jsonEncode(data));
+  }
+
+  Future<Map<String, dynamic>?> getUserData() async {
+    // Migrate from old SharedPreferences if exists
+    final legacyData = _prefs.getString(StorageKeys.userData);
+    if (legacyData != null) {
+      await _secureStorage.write(StorageKeys.userData, legacyData);
+      await _prefs.remove(StorageKeys.userData);
+      try { return jsonDecode(legacyData) as Map<String, dynamic>; } catch (_) { return null; }
+    }
+    final data = await _secureStorage.read(StorageKeys.userData);
+    if (data == null) return null;
+    try { return jsonDecode(data) as Map<String, dynamic>; } catch (_) { return null; }
+  }
+
+  // School ID — NOW STORED IN SECURE STORAGE
   Future<void> setSchoolId(String schoolId) async {
-    await _prefs.setString('school_id', schoolId);
+    await _secureStorage.write('school_id', schoolId);
   }
 
-  String? getSchoolId() {
-    return _prefs.getString('school_id');
+  Future<String?> getSchoolId() async {
+    final legacyId = _prefs.getString('school_id');
+    if (legacyId != null) {
+      await _secureStorage.write('school_id', legacyId);
+      await _prefs.remove('school_id');
+      return legacyId;
+    }
+    return await _secureStorage.read('school_id');
   }
 
-  // FCM Token
+  // FCM Token — NOW STORED IN SECURE STORAGE
   Future<void> setFcmToken(String token) async {
-    await _prefs.setString(StorageKeys.fcmToken, token);
+    await _secureStorage.setFcmToken(token);
   }
 
-  String? getFcmToken() {
-    return _prefs.getString(StorageKeys.fcmToken);
+  Future<String?> getFcmToken() async {
+    final legacyToken = _prefs.getString(StorageKeys.fcmToken);
+    if (legacyToken != null) {
+      await _secureStorage.setFcmToken(legacyToken);
+      await _prefs.remove(StorageKeys.fcmToken);
+      return legacyToken;
+    }
+    return await _secureStorage.getFcmToken();
   }
 
-  // Last Sync
+  // Last Sync — non-sensitive, keep in SharedPreferences
   Future<void> setLastSync(DateTime time) async {
     await _prefs.setInt(StorageKeys.lastSync, time.millisecondsSinceEpoch);
   }
@@ -85,7 +116,7 @@ class Preferences {
     return DateTime.fromMillisecondsSinceEpoch(ms);
   }
 
-  // First Launch
+  // First Launch — non-sensitive, keep in SharedPreferences
   Future<void> setFirstLaunch(bool value) async {
     await _prefs.setBool(StorageKeys.firstLaunch, value);
   }
@@ -94,7 +125,7 @@ class Preferences {
     return _prefs.getBool(StorageKeys.firstLaunch) ?? true;
   }
 
-  // Onboarding
+  // Onboarding — non-sensitive, keep in SharedPreferences
   Future<void> setOnboardingComplete(bool value) async {
     await _prefs.setBool(StorageKeys.onboardingComplete, value);
   }
@@ -103,7 +134,7 @@ class Preferences {
     return _prefs.getBool(StorageKeys.onboardingComplete) ?? false;
   }
 
-  // Device ID
+  // Device ID — non-sensitive, keep in SharedPreferences
   Future<void> setDeviceId(String id) async {
     await _prefs.setString(StorageKeys.deviceId, id);
   }
@@ -112,7 +143,7 @@ class Preferences {
     return _prefs.getString(StorageKeys.deviceId);
   }
 
-  // Notification Sounds
+  // Notification Sounds — non-sensitive, keep in SharedPreferences
   Future<void> setNotificationSounds(bool value) async {
     await _prefs.setBool(StorageKeys.notificationSounds, value);
   }
@@ -121,7 +152,7 @@ class Preferences {
     return _prefs.getBool(StorageKeys.notificationSounds) ?? true;
   }
 
-  // Push Notifications
+  // Push Notifications — non-sensitive, keep in SharedPreferences
   Future<void> setPushNotifications(bool value) async {
     await _prefs.setBool(StorageKeys.pushNotifications, value);
   }
@@ -130,16 +161,20 @@ class Preferences {
     return _prefs.getBool(StorageKeys.pushNotifications) ?? true;
   }
 
-  // Clear Auth Data
+  // Clear Auth Data — clear from BOTH storage layers
   Future<void> clearAuth() async {
+    await _secureStorage.clearAuth();
+    // Also clear legacy SharedPreferences keys
     await _prefs.remove(StorageKeys.authToken);
     await _prefs.remove(StorageKeys.refreshToken);
     await _prefs.remove(StorageKeys.userData);
     await _prefs.remove('school_id');
+    await _prefs.remove(StorageKeys.fcmToken);
   }
 
   // Clear All
   Future<void> clearAll() async {
+    await _secureStorage.deleteAll();
     await _prefs.clear();
   }
 }

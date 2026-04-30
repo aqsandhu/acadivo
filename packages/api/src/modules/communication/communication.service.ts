@@ -85,11 +85,16 @@ export async function getAnnouncements(
     where.targetAudience = { in: allowedAudiences };
   }
 
+  const conditions: Record<string, unknown>[] = [
+    { expiresAt: null },
+    { expiresAt: { gt: new Date() } },
+  ];
+
   if (classId) {
-    where.OR = [
+    conditions.push(
       { targetClassId: classId },
       { targetClassId: null },
-    ];
+    );
   }
 
   if (priority) where.priority = priority;
@@ -99,11 +104,8 @@ export async function getAnnouncements(
     if (toDate) (where.createdAt as Record<string, Date>).lte = new Date(toDate);
   }
 
-  // Exclude expired
-  where.OR = [
-    { expiresAt: null },
-    { expiresAt: { gt: new Date() } },
-  ];
+  // Exclude expired AND apply class filter (if any)
+  where.AND = [{ OR: conditions }];
 
   const [announcements, totalCount] = await Promise.all([
     prisma.announcement.findMany({
