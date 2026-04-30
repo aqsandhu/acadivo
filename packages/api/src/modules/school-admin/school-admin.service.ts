@@ -177,14 +177,18 @@ export async function deactivateTeacher(tenantId: string, id: string) {
 
 export async function createStudent(tenantId: string, schoolCode: string, data: any) {
   const uniqueId = await generateUniqueId(prisma, 'STUDENT', tenantId, schoolCode);
-  const passwordHash = await hashPassword(data.password);
+  const studentPasswordHash = await hashPassword(data.password);
+  // Parent uses the SAME uniqueId but a different default password
+  const parentPassword = data.parentPassword || `${uniqueId.split('-').pop()}@Parent`;
+  const parentPasswordHash = await hashPassword(parentPassword);
 
   return prisma.$transaction(async (tx) => {
-    const user = await tx.user.create({
+    // ── Create Student User ──
+    const studentUser = await tx.user.create({
       data: {
         uniqueId,
         email: data.email,
-        passwordHash,
+        passwordHash: studentPasswordHash,
         role: 'STUDENT',
         tenantId,
         firstName: data.firstName,
@@ -199,7 +203,7 @@ export async function createStudent(tenantId: string, schoolCode: string, data: 
 
     const student = await tx.student.create({
       data: {
-        userId: user.id,
+        userId: studentUser.id,
         tenantId,
         rollNumber: data.rollNumber,
         classId: data.classId,
@@ -213,7 +217,44 @@ export async function createStudent(tenantId: string, schoolCode: string, data: 
       },
     });
 
-    return { user, student };
+    // ── Create Parent User with SAME uniqueId ──
+    const parentUser = await tx.user.create({
+      data: {
+        uniqueId, // SAME ID as student
+        email: data.parentEmail || data.email,
+        passwordHash: parentPasswordHash,
+        role: 'PARENT',
+        tenantId,
+        firstName: data.guardianName.split(' ')[0] || data.guardianName,
+        lastName: data.guardianName.split(' ').slice(1).join(' ') || '.',
+        phone: data.guardianPhone,
+        gender: data.guardianGender || null,
+      },
+    });
+
+    const parent = await tx.parent.create({
+      data: {
+        userId: parentUser.id,
+        tenantId,
+        occupation: data.parentOccupation,
+        emergencyContact: data.emergencyContact,
+        emergencyRelation: data.emergencyRelation,
+      },
+    });
+
+    // ── Link Student ↔ Parent ──
+    await tx.studentParent.create({
+      data: {
+        studentId: student.userId,
+        parentId: parent.userId,
+        relation: data.guardianRelation as any,
+        isPrimary: true,
+        canPickup: true,
+        tenantId,
+      },
+    });
+
+    return { user: studentUser, student, parentUser, parent };
   });
 }
 

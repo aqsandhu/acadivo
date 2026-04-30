@@ -303,6 +303,7 @@ model User {
   loginAttempts       Int       @default(0)
   lockUntil           DateTime?
   passwordChangedAt   DateTime?
+  preferences         Json?            // User notification/sound/language preferences
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 

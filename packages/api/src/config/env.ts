@@ -43,6 +43,16 @@ const envSchema = z.object({
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_PHONE_NUMBER: z.string().optional(),
 
+  // Pakistani SMS Gateway
+  PAK_SMS_PROVIDER: z.enum(["jazz", "zong", "telenor", "twilio"]).default("twilio"),
+  JAZZ_API_KEY: z.string().optional(),
+  JAZZ_API_SECRET: z.string().optional(),
+  JAZZ_API_ENDPOINT: z.string().url().optional(),
+  ZONG_API_KEY: z.string().optional(),
+  ZONG_API_ENDPOINT: z.string().url().optional(),
+  TELENOR_API_KEY: z.string().optional(),
+  TELENOR_API_ENDPOINT: z.string().url().optional(),
+
   // Cloudinary
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),

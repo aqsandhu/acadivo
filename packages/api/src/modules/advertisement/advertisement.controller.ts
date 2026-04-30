@@ -24,6 +24,26 @@ export const getActiveAds = asyncHandler(async (req: AuthRequest, res: Response)
   return ApiResponse.paginated(res, result.ads, page, pageSize, result.totalCount, "Active ads fetched");
 });
 
+export const getConsumerAds = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const tenantId = req.user!.tenantId;
+  const userRole = req.user!.role;
+  const page = parseInt(req.query.page as string) || 1;
+  const pageSize = parseInt(req.query.pageSize as string) || 10;
+
+  const result = await adService.getConsumerAds(
+    userId,
+    tenantId,
+    userRole,
+    req.query.city as string,
+    req.query.schoolType as string,
+    page,
+    pageSize
+  );
+
+  return ApiResponse.paginated(res, result.ads, page, pageSize, result.totalCount, "Consumer ads fetched");
+});
+
 export const getAdById = asyncHandler(async (req: AuthRequest, res: Response) => {
   const ad = await adService.getAdById(req.params.id);
   return ApiResponse.success(res, ad, "Ad fetched");

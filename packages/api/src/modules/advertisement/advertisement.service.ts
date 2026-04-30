@@ -72,6 +72,82 @@ export async function getActiveAds(
   return { ads, totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) };
 }
 
+// ── Consumer Ads (excludes already seen ads) ──
+
+export async function getConsumerAds(
+  userId: string,
+  tenantId: string,
+  userRole: string,
+  city?: string,
+  schoolType?: string,
+  page = 1,
+  pageSize = 10
+) {
+  const now = new Date();
+
+  const roleToAudience: Record<string, AdTargetAudience> = {
+    STUDENT: "STUDENTS",
+    PARENT: "PARENTS",
+    TEACHER: "TEACHERS",
+    PRINCIPAL: "PRINCIPALS",
+    ADMIN: "ADMIN",
+    SUPER_ADMIN: "ADMIN",
+  };
+
+  const userAudience = roleToAudience[userRole] || "ALL";
+
+  // Find ad IDs already seen by this user in this tenant
+  const seenAdIds = await prisma.adImpression.findMany({
+    where: { userId, tenantId, impressionType: "VIEW" },
+    select: { adId: true },
+    distinct: ["adId"],
+  });
+  const excludedIds = seenAdIds.map((s) => s.adId);
+
+  const where: Record<string, unknown> = {
+    status: "ACTIVE",
+    startDate: { lte: now },
+    endDate: { gte: now },
+    id: { notIn: excludedIds },
+    OR: [
+      { targetAudience: "ALL" },
+      { targetAudience: userAudience },
+    ],
+  };
+
+  if (city) {
+    where.targetCities = { path: [], array_contains: city };
+  }
+  if (schoolType) {
+    where.targetSchoolTypes = { path: [], array_contains: schoolType };
+  }
+
+  const [ads, totalCount] = await Promise.all([
+    prisma.advertisement.findMany({
+      where,
+      orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        imageUrl: true,
+        linkUrl: true,
+        targetAudience: true,
+        priority: true,
+        startDate: true,
+        endDate: true,
+        impressionCount: true,
+        clickCount: true,
+      },
+    }),
+    prisma.advertisement.count({ where }),
+  ]);
+
+  return { ads, totalCount, page, pageSize, totalPages: Math.ceil(totalCount / pageSize) };
+}
+
 export async function getAdById(id: string) {
   const ad = await prisma.advertisement.findUnique({
     where: { id },

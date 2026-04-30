@@ -43,15 +43,15 @@ const ROLE_PREFIX: Record<string, string> = {
   PRINCIPAL: 'PR',
   ADMIN: 'AD',
   TEACHER: 'TC',
-  STUDENT: 'STU',
-  PARENT: 'PAR',
+  STUDENT: 'ACD',
+  PARENT: 'ACD',
 };
 
 /**
  * Atomically generate the next unique ID using a sequence counter.
  * Uses Prisma transaction with raw query to prevent race conditions.
- * Format: PREFIX-SCHOOLCODE-### (e.g., STU-SCH001-001)
- * Student-Parent shared format: STU-SCHOOLCODE-### and PAR-SCHOOLCODE-###
+ * Format: PREFIX-SCHOOLCODE-### (e.g., ACD-SCH001-001)
+ * Student and Parent share the same ID prefix and sequence (ACD).
  */
 export async function generateUniqueId(
   prisma: PrismaClient,
@@ -62,41 +62,47 @@ export async function generateUniqueId(
   const prefix = ROLE_PREFIX[role] || 'USR';
   const code = schoolCode || tenantId.slice(0, 6).toUpperCase();
 
-  // Use a transaction-level advisory lock + sequence query to prevent race conditions
+  // STUDENT and PARENT share the same ACD prefix and sequence
+  const isSharedRole = role === 'STUDENT' || role === 'PARENT';
+
   return prisma.$transaction(async (tx) => {
     // Acquire advisory lock for this tenant+role combination
-    const lockId = `uid_${tenantId}_${role}`;
+    const lockId = isSharedRole ? `uid_${tenantId}_ACD` : `uid_${tenantId}_${role}`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockId}))`;
 
     // Count existing users with this role in this tenant (excluding soft-deleted)
     let count = 0;
-    switch (role) {
-      case 'TEACHER':
-        count = await tx.teacher.count({ where: { tenantId, user: { isActive: true } } });
-        break;
-      case 'STUDENT':
-        count = await tx.student.count({ where: { tenantId, status: 'ACTIVE' } });
-        break;
-      case 'PARENT':
-        count = await tx.parent.count({ where: { tenantId, user: { isActive: true } } });
-        break;
-      case 'ADMIN':
-        count = await tx.schoolAdmin.count({ where: { tenantId, user: { isActive: true } } });
-        break;
-      case 'PRINCIPAL':
-        count = await tx.principal.count({ where: { tenantId, user: { isActive: true } } });
-        break;
-      default:
-        count = await tx.user.count({ where: { tenantId, role, isActive: true } });
+    if (isSharedRole) {
+      // Count BOTH students and parents for shared ACD sequence
+      const [studentCount, parentCount] = await Promise.all([
+        tx.student.count({ where: { tenantId, status: 'ACTIVE' } }),
+        tx.parent.count({ where: { tenantId, user: { isActive: true } } }),
+      ]);
+      count = studentCount + parentCount;
+    } else {
+      switch (role) {
+        case 'TEACHER':
+          count = await tx.teacher.count({ where: { tenantId, user: { isActive: true } } });
+          break;
+        case 'ADMIN':
+          count = await tx.schoolAdmin.count({ where: { tenantId, user: { isActive: true } } });
+          break;
+        case 'PRINCIPAL':
+          count = await tx.principal.count({ where: { tenantId, user: { isActive: true } } });
+          break;
+        default:
+          count = await tx.user.count({ where: { tenantId, role, isActive: true } });
+      }
     }
 
     // Atomically increment a sequence stored in Redis for extra safety
     let seq = count + 1;
     try {
       const { redis } = require('../../config/redis');
-      const redisSeq = await redis.incr(`seq:${tenantId}:${role}`);
+      const redisKey = isSharedRole ? `seq:${tenantId}:ACD` : `seq:${tenantId}:${role}`;
+      const redisSeq = await redis.incr(redisKey);
       if (redisSeq > seq) seq = redisSeq;
-      else await redis.set(`seq:${tenantId}:${role}`, seq);
+      else await redis.set(redisKey, seq);
     } catch {
       // Redis unavailable, fall back to count-based
     }

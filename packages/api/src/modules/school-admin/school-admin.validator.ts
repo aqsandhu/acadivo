@@ -64,6 +64,12 @@ export const createStudentSchema = z.object({
   guardianPhone: z.string().min(1),
   guardianRelation: z.string().min(1),
   guardianCNIC: z.string().optional(),
+  guardianGender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
+  parentEmail: z.string().email().optional(),
+  parentPassword: z.string().min(6).optional(),
+  parentOccupation: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  emergencyRelation: z.string().optional(),
   bloodGroup: z.string().optional(),
   medicalNotes: z.string().optional(),
 });
