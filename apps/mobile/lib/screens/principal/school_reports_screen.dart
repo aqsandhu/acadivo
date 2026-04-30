@@ -98,18 +98,33 @@ class _SchoolReportsScreenState extends ConsumerState<SchoolReportsScreen> {
                                   leading: const Icon(Icons.bar_chart, color: Color(0xFF1E40AF)),
                                   title: Text(isUrdu ? 'حاضری کی رپورٹ' : 'Attendance Report'),
                                   trailing: const Icon(Icons.chevron_right),
+                                  onTap: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(isUrdu ? 'جلد آرہا ہے' : 'Coming soon')),
+                                    );
+                                  },
                                 ),
                                 const Divider(height: 1),
                                 ListTile(
                                   leading: const Icon(Icons.trending_up, color: Color(0xFF10B981)),
                                   title: Text(isUrdu ? 'نتائج کی رپورٹ' : 'Results Report'),
                                   trailing: const Icon(Icons.chevron_right),
+                                  onTap: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(isUrdu ? 'جلد آرہا ہے' : 'Coming soon')),
+                                    );
+                                  },
                                 ),
                                 const Divider(height: 1),
                                 ListTile(
                                   leading: const Icon(Icons.payment, color: Color(0xFFF59E0B)),
                                   title: Text(isUrdu ? 'فیس کی رپورٹ' : 'Fee Report'),
                                   trailing: const Icon(Icons.chevron_right),
+                                  onTap: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(isUrdu ? 'جلد آرہا ہے' : 'Coming soon')),
+                                    );
+                                  },
                                 ),
                               ],
                             ),

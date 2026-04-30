@@ -461,6 +461,11 @@ async function submitHomework(homeworkId: string, data: { content?: string; atta
   return res.data;
 }
 
+async function createHomework(data: Partial<Homework>): Promise<Homework> {
+  const res = await api.post<ApiResponse<Homework>>("/teacher/homework", data);
+  return res.data.data!;
+}
+
 /* ── Marks ── */
 
 async function getMarks(params?: { className?: string; section?: string; subject?: string; examType?: string }): Promise<Mark[]> {
@@ -677,6 +682,7 @@ export const mockApi = {
   getHomework,
   getSubmissions,
   submitHomework,
+  createHomework,
 
   // Marks
   getMarks,
@@ -805,7 +811,6 @@ export {
   getMessages,
   sendMessage,
   getNotifications,
-  markNotificationR  getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
   deleteNotification,
@@ -813,6 +818,7 @@ export {
   getHomework,
   getSubmissions,
   submitHomework,
+  createHomework,
   getMarks,
   saveMarks,
   getResults,

@@ -21,7 +21,7 @@ export interface AuthenticatedSocket extends Socket {
 export interface PrivateMessageData {
   receiverId: string;
   content: string;
-  messageType?: "TEXT" | "IMAGE" | "FILE" | "AUDIO" | "VIDEO";
+  messageType?: "TEXT" | "IMAGE" | "FILE" | "VOICE" | "VIDEO";
   attachments?: MessageAttachment[];
   replyToId?: string;
 }
@@ -29,7 +29,7 @@ export interface PrivateMessageData {
 export interface GroupMessageData {
   receiverIds: string[];
   content: string;
-  messageType?: "TEXT" | "IMAGE" | "FILE" | "AUDIO" | "VIDEO";
+  messageType?: "TEXT" | "IMAGE" | "FILE" | "VOICE" | "VIDEO";
   attachments?: MessageAttachment[];
   replyToId?: string;
 }

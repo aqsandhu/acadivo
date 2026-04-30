@@ -75,7 +75,7 @@ export function validate<T>(schema: ZodSchema<T>, source: "body" | "query" | "pa
       const details = formatZodErrors(parsed.error);
       return next(new ApiError("Validation failed", 400, true, "VALIDATION_ERROR"));
     }
-    (req as any)[source] = parsed.data;
+    (req as Record<string, any>)[source] = parsed.data;
     next();
   };
 }

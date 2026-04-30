@@ -9,22 +9,33 @@ export interface Notification {
   title: string;
   body: string;
   type: NotificationType;
+  priority: NotificationPriority;
   category: NotificationCategory;
   data?: Record<string, unknown>;
-  relatedId?: string;
-  link?: string;
+  senderId?: string;
   isRead: boolean;
   readAt?: Date;
-  sentViaPush: boolean;
-  fcmToken?: string;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export enum NotificationType {
-  INFO = "INFO",
-  SUCCESS = "SUCCESS",
-  WARNING = "WARNING",
-  ERROR = "ERROR",
+  ANNOUNCEMENT = "ANNOUNCEMENT",
+  MESSAGE = "MESSAGE",
+  REPORT_READY = "REPORT_READY",
+  FEE_DUE = "FEE_DUE",
+  ATTENDANCE_ALERT = "ATTENDANCE_ALERT",
+  HOMEWORK = "HOMEWORK",
+  RESULT = "RESULT",
+  TIMETABLE_CHANGE = "TIMETABLE_CHANGE",
+  ADVERTISEMENT = "ADVERTISEMENT",
+}
+
+export enum NotificationPriority {
+  LOW = "LOW",
+  NORMAL = "NORMAL",
+  HIGH = "HIGH",
+  URGENT = "URGENT",
 }
 
 export enum NotificationCategory {
@@ -39,15 +50,16 @@ export enum NotificationCategory {
 }
 
 export interface NotificationPreference {
+  id?: string;
   userId: string;
   tenantId: string;
-  channels: {
-    push: boolean;
-    email: boolean;
-    sms: boolean;
-    inApp: boolean;
-  };
-  categories: Record<NotificationCategory, boolean>;
+  category: NotificationCategory;
+  pushEnabled: boolean;
+  emailEnabled: boolean;
+  smsEnabled: boolean;
+  inAppEnabled: boolean;
   quietHoursStart?: string;
   quietHoursEnd?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

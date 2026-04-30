@@ -32,7 +32,7 @@ export function extractTenantIdentifier(req: Request): { tenantId?: string; tena
  * Prefer user context when available (ensures RBAC).
  */
 export function resolveTenantId(req: Request): string | null {
-  const userTenantId = (req as any).user?.tenantId;
+  const userTenantId = req.user?.tenantId;
   if (userTenantId) return userTenantId;
 
   const { tenantId } = extractTenantIdentifier(req);

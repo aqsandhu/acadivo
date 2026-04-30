@@ -8,7 +8,7 @@ export const sendMessageSchema = z.object({
   receiverId: z.string().uuid().optional(),
   groupId: z.string().uuid().optional(),
   content: z.string().min(1).max(5000),
-  messageType: z.enum(["TEXT", "IMAGE", "FILE", "AUDIO", "VIDEO", "ANNOUNCEMENT"]).default("TEXT"),
+  messageType: z.enum(["TEXT", "IMAGE", "FILE", "VOICE", "VIDEO", "ANNOUNCEMENT"]).default("TEXT"),
   attachments: z.array(z.object({
     url: z.string().url(),
     type: z.string(),

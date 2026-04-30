@@ -120,7 +120,7 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
 
 export const updateMe = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user?.userId!;
-  const avatarFile = (req as any).file;
+  const avatarFile = (req as (Request & { file?: any })).file;
   auditLog("PROFILE_UPDATED", userId, { fields: Object.keys(req.body) });
   const result = await authService.updateProfile(userId, { ...req.body, avatarFile });
   res.status(200).json(successResponse(result, "Profile updated successfully"));

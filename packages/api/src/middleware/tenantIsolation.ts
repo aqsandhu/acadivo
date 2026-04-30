@@ -46,7 +46,7 @@ export function tenantIsolation(allowSuperAdmin = true): RequestHandler {
     }
 
     // Attach resolved tenantId to request for downstream use
-    (req as any).resolvedTenantId = userTenantId;
+    req.resolvedTenantId = userTenantId;
     next();
   };
 }

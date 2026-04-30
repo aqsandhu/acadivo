@@ -6,6 +6,7 @@ import compression from "compression";
 import dotenv from "dotenv";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
+import { prisma } from "./config/database";
 
 // Route modules
 import authRoutes from "./modules/auth/auth.routes";
@@ -25,7 +26,7 @@ import qaRoutes from "./modules/qa/qa.routes";
 import examRoutes from "./modules/exam/exam.routes";
 import healthRoutes from "./modules/health/health.routes";
 import exportRoutes from "./modules/export/export.routes";
-import importRoutes from "./modules/import/import.routes";
+// import importRoutes from "./modules/import/import.routes"; // Module not yet implemented
 import { getPreferences, updatePreferences } from "./modules/user/user.preferences.controller";
 
 // Middleware
@@ -51,6 +52,16 @@ const API_V1 = "/api/v1";
 const httpServer = createServer(app);
 
 // ── Socket.io with JWT auth ──
+
+interface AuthenticatedSocket {
+  user: {
+    userId: string;
+    tenantId: string;
+    role: string;
+    uniqueId: string;
+  };
+}
+
 const io = new SocketIOServer(httpServer, {
   cors: {
     origin: process.env.WEB_URL || "http://localhost:3000",
@@ -66,7 +77,7 @@ io.use((socket, next) => {
   }
   try {
     const decoded = verifyToken(token as string, "access");
-    (socket as any).user = decoded;
+    (socket as unknown as AuthenticatedSocket & typeof socket).user = decoded as AuthenticatedSocket["user"];
     next();
   } catch {
     next(new Error("Invalid authentication token"));
@@ -74,11 +85,51 @@ io.use((socket, next) => {
 });
 
 io.on("connection", (socket) => {
-  const user = (socket as any).user;
+  const user = (socket as unknown as AuthenticatedSocket & typeof socket).user;
   if (user?.tenantId) {
     socket.join(`tenant:${user.tenantId}`);
   }
   socket.join(`user:${user?.userId}`);
+
+  // Real-time messaging events
+  socket.on("send_message", async (data: { receiverId: string; content: string; messageType?: string }) => {
+    try {
+      const message = await prisma.message.create({
+        data: {
+          tenantId: user.tenantId,
+          senderId: user.userId,
+          receiverId: data.receiverId,
+          content: data.content,
+          messageType: (data.messageType as "TEXT" | "IMAGE" | "FILE" | "VOICE" | "VIDEO") || "TEXT",
+        },
+      });
+      // Emit to receiver's user room and tenant room
+      io.to(`user:${data.receiverId}`).emit("receive_message", message);
+      io.to(`user:${user.userId}`).emit("message_sent", message);
+    } catch (err: any) {
+      socket.emit("error", { message: err.message });
+    }
+  });
+
+  socket.on("typing", (data: { receiverId: string; isTyping: boolean }) => {
+    io.to(`user:${data.receiverId}`).emit("typing", { senderId: user.userId, isTyping: data.isTyping });
+  });
+
+  socket.on("mark_read", async (data: { messageId: string }) => {
+    try {
+      await prisma.message.update({
+        where: { id: data.messageId, receiverId: user.userId },
+        data: { isRead: true, readAt: new Date() },
+      });
+      // Notify sender
+      const message = await prisma.message.findUnique({ where: { id: data.messageId } });
+      if (message) {
+        io.to(`user:${message.senderId}`).emit("message_read", { messageId: data.messageId, readAt: new Date() });
+      }
+    } catch (err: any) {
+      socket.emit("error", { message: err.message });
+    }
+  });
 
   socket.on("disconnect", () => {
     // Cleanup handled automatically by Socket.io
@@ -161,7 +212,7 @@ app.use(`${API_V1}/qa`, authMiddleware, tenantGuard(), qaRoutes);
 app.use(`${API_V1}/exams`, authMiddleware, tenantGuard(), examRoutes);
 app.use(`${API_V1}/health`, healthRoutes);
 app.use(`${API_V1}/export`, authMiddleware, tenantGuard(), authorize("ADMIN", "PRINCIPAL", "SUPER_ADMIN"), exportRoutes);
-app.use(`${API_V1}/import`, authMiddleware, tenantGuard(), authorize("ADMIN", "PRINCIPAL", "SUPER_ADMIN"), importRoutes);
+// app.use(`${API_V1}/import`, authMiddleware, tenantGuard(), authorize("ADMIN", "PRINCIPAL", "SUPER_ADMIN"), importRoutes); // Disabled - module not yet implemented
 
 // ── User Preferences ──
 app.get(`${API_V1}/user/preferences`, authMiddleware, tenantGuard(), getPreferences);

@@ -21,6 +21,8 @@ import {
   SubscriptionPlan,
   AdStatus,
   AdTargetAudience,
+  SchoolSubscriptionStatus,
+  FeeStatus,
 } from "@prisma/client";
 import type { UploadFile } from "../../utils/upload";
 import { uploadToCloudinary } from "../../utils/upload";
@@ -124,7 +126,7 @@ export async function getDashboardStats() {
       where: { lastLoginAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
     }),
     prisma.tenant.count({ where: { status: TenantStatus.PENDING } }),
-    prisma.schoolSubscription.count({ where: { status: "ACTIVE" as any } }),
+    prisma.schoolSubscription.count({ where: { status: SchoolSubscriptionStatus.ACTIVE } }),
   ]);
 
   return {
@@ -241,14 +243,14 @@ export async function onboardSchool(dto: OnboardSchoolDTO, createdBy: string) {
     });
 
     // Resolve subscription plan ID
-    const planRecord = await tx.subscriptionPlan.findFirst({ where: { name: dto.subscriptionPlan } });
+    const planRecord = await tx.platformPlan.findFirst({ where: { name: dto.subscriptionPlan } });
     const planId = planRecord?.id || "00000000-0000-0000-0000-000000000000";
 
     await tx.schoolSubscription.create({
       data: {
         tenantId: tenant.id,
         planId,
-        status: "ACTIVE" as any,
+        status: SchoolSubscriptionStatus.ACTIVE,
         maxTeachers: dto.maxTeachers ?? 10,
         maxStudents: dto.maxStudents ?? 100,
         startDate: new Date(),
@@ -356,7 +358,7 @@ export async function updateSubscription(id: string, data: any) {
 
   let planId: string | undefined;
   if (data.plan) {
-    const planRecord = await prisma.subscriptionPlan.findFirst({ where: { name: data.plan } });
+    const planRecord = await prisma.platformPlan.findFirst({ where: { name: data.plan } });
     planId = planRecord?.id;
   }
 
@@ -399,7 +401,7 @@ export async function getPlatformAnalytics(period: "7d" | "30d" | "90d" | "1y" =
     prisma.user.count({ where: { createdAt: { gte: since } } }),
     prisma.message.count({ where: { createdAt: { gte: since } } }),
     prisma.feeRecord.aggregate({
-      where: { createdAt: { gte: since }, status: "PAID" as any },
+      where: { createdAt: { gte: since }, status: FeeStatus.PAID },
       _sum: { paidAmount: true },
     }),
     prisma.user.count({ where: { lastLoginAt: { gte: since } } }),

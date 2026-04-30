@@ -11,7 +11,7 @@ const PASSWORD_MAX_LENGTH = 128;
 const DEFAULT_PAGINATION_LIMIT = 10;
 const MAX_PAGINATION_LIMIT = 100;
 const ATTENDANCE_STATUSES = ['PRESENT', 'ABSENT', 'LATE', 'LEAVE', 'HALF_DAY'];
-const FEE_FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'ANNUAL', 'ONE_TIME'];
+const FEE_FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'YEARLY', 'ONE_TIME'];
 const FEE_CATEGORIES = ['TUITION', 'EXAM', 'LIBRARY', 'LAB', 'SPORTS', 'TRANSPORT', 'OTHER'];
 const EXAM_TYPES = ['QUIZ_1', 'QUIZ_2', 'MID_TERM', 'FINAL_TERM', 'ASSIGNMENT', 'PROJECT'];
 const GRADE_SCALE = [
@@ -31,7 +31,7 @@ const GRADE_SCALE = [
 const NOTIFICATION_TYPES = ['HOMEWORK', 'ATTENDANCE', 'FEE', 'ANNOUNCEMENT', 'RESULT', 'MESSAGE', 'GENERAL'];
 const USER_ROLES = ['ADMIN', 'PRINCIPAL', 'TEACHER', 'STUDENT', 'PARENT'];
 const SCHOOL_STATUS = ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_VERIFICATION'];
-const PAYMENT_METHODS = ['CASH', 'BANK_TRANSFER', 'JAZZCASH', 'EASYPAISA', 'CREDIT_CARD', 'CHEQUE'];
+const PAYMENT_METHODS = ['CASH', 'BANK_TRANSFER', 'JAZZCASH', 'EASYPAYSA', 'CARD', 'ONLINE', 'CHEQUE'];
 
 describe('Constant Values Tests', () => {
   describe('Application Constants', () => {
@@ -106,7 +106,7 @@ describe('Constant Values Tests', () => {
     it('has all fee frequencies', () => {
       expect(FEE_FREQUENCIES).toContain('MONTHLY');
       expect(FEE_FREQUENCIES).toContain('QUARTERLY');
-      expect(FEE_FREQUENCIES).toContain('ANNUAL');
+      expect(FEE_FREQUENCIES).toContain('YEARLY');
       expect(FEE_FREQUENCIES).toContain('ONE_TIME');
       expect(FEE_FREQUENCIES).toHaveLength(4);
     });
@@ -200,10 +200,11 @@ describe('Constant Values Tests', () => {
       expect(PAYMENT_METHODS).toContain('CASH');
       expect(PAYMENT_METHODS).toContain('BANK_TRANSFER');
       expect(PAYMENT_METHODS).toContain('JAZZCASH');
-      expect(PAYMENT_METHODS).toContain('EASYPAISA');
-      expect(PAYMENT_METHODS).toContain('CREDIT_CARD');
+      expect(PAYMENT_METHODS).toContain('EASYPAYSA');
+      expect(PAYMENT_METHODS).toContain('CARD');
+      expect(PAYMENT_METHODS).toContain('ONLINE');
       expect(PAYMENT_METHODS).toContain('CHEQUE');
-      expect(PAYMENT_METHODS).toHaveLength(6);
+      expect(PAYMENT_METHODS).toHaveLength(7);
     });
   });
 });

@@ -41,15 +41,7 @@ function initFirebase() {
 export async function registerFCMToken(userId: string, token: string, deviceType?: string) {
   initFirebase();
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      // Store FCM token in a metadata JSON field if available, or use a separate table
-      // For now, we update a custom field if it exists in schema
-    },
-  });
-
-  // Store in Redis for quick lookup
+  // Store in Redis for quick lookup (primary storage for FCM tokens)
   const { redis } = require("../config/redis");
   await redis.setex(`fcm:${userId}`, 30 * 24 * 60 * 60, JSON.stringify({ token, deviceType, registeredAt: new Date().toISOString() }));
 

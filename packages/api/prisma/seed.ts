@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, TenantType, TenantStatus, SubscriptionPlan, StudentStatus, ParentRelation, AttendanceStatus, FeeType, FeeFrequency, FeeStatus, PaymentMethod, AnnouncementPriority, AnnouncementTargetAudience, NotificationType, MessageType, ExamType, HomeworkSubmissionStatus, ResultTerm, ResultStatus, ReportRequestType, SettingCategory } from '@prisma/client';
+import { PrismaClient, UserRole, TenantType, TenantStatus, SubscriptionPlan, StudentStatus, ParentRelation, AttendanceStatus, FeeType, FeeFrequency, FeeStatus, PaymentMethod, AnnouncementPriority, AnnouncementTargetAudience, NotificationType, MessageType, ExamType, HomeworkSubmissionStatus, ResultTerm, ResultStatus, ReportRequestStatus, ReportRequestType, SchoolSubscriptionStatus, AdStatus, LoginStatus, SettingCategory } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -14,7 +14,7 @@ async function main() {
   // ───────────────────────────────────────────
   // 1. Subscription Plans
   // ───────────────────────────────────────────
-  const planFree = await prisma.subscriptionPlan.upsert({
+  const planFree = await prisma.platformPlan.upsert({
     where: { name: 'Free' },
     update: {},
     create: {
@@ -27,7 +27,7 @@ async function main() {
     },
   });
 
-  const planStandard = await prisma.subscriptionPlan.upsert({
+  const planStandard = await prisma.platformPlan.upsert({
     where: { name: 'Standard' },
     update: {},
     create: {
@@ -116,7 +116,7 @@ async function main() {
       id: '00000000-0000-0000-0000-000000000001',
       tenantId: school.id,
       planId: planStandard.id,
-      status: 'ACTIVE',
+      status: SchoolSubscriptionStatus.ACTIVE,
       startDate: new Date('2024-01-01'),
       endDate: new Date('2025-12-31'),
       amountPaid: 49999.99,
@@ -593,6 +593,7 @@ async function main() {
       dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       maxMarks: 20,
       isActive: true,
+      academicYear: '2024-2025',
     },
   });
 
@@ -959,7 +960,7 @@ async function main() {
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0',
       deviceType: 'Desktop',
       location: 'Lahore, Punjab, Pakistan',
-      status: 'SUCCESS',
+      status: LoginStatus.SUCCESS,
     },
   });
 

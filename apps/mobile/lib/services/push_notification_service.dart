@@ -100,10 +100,17 @@ class PushNotificationService {
       final connectivity = await Connectivity().checkConnectivity();
       if (connectivity == ConnectivityResult.none) return false;
       final apiService = ApiServiceProvider.instance;
+      // Ensure ApiService is initialized before using
+      if (apiService.dio.options.baseUrl.isEmpty) {
+        apiService.init();
+      }
       final response = await apiService.dio.post(ApiConstants.registerFcmToken,
         data: {'fcmToken': token, 'platform': Platform.isIOS ? 'ios' : 'android'});
       return response.statusCode == 200;
-    } catch (e) { return false; }
+    } catch (e) { 
+      debugPrint('[FCM] Token backend registration failed: $e');
+      return false; 
+    }
   }
 
   void _schedulePeriodicTokenCheck() {
@@ -137,8 +144,14 @@ class PushNotificationService {
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null && response.payload!.isNotEmpty) {
       debugPrint('Notification tapped: ${response.payload}');
+      // Store the pending route for the app to handle after navigation is ready
+      _pendingNotificationPayload = response.payload;
     }
   }
+
+  String? _pendingNotificationPayload;
+  String? get pendingNotificationPayload => _pendingNotificationPayload;
+  void clearPendingPayload() => _pendingNotificationPayload = null;
 
   @pragma('vm:entry-point')
   static void _onBackgroundNotificationTap(NotificationResponse response) {
@@ -147,6 +160,10 @@ class PushNotificationService {
 
   void _handleMessageOpenedApp(RemoteMessage message) {
     debugPrint('Message opened app: ${message.messageId}');
+    final route = message.data['route'] ?? message.data['screen'];
+    if (route != null && route.isNotEmpty) {
+      _pendingNotificationPayload = route;
+    }
   }
 
   Future<String?> getToken() async {

@@ -6,6 +6,7 @@ export interface Attendance {
   id: string;
   studentId: string;
   classId: string;
+  sectionId: string;
   tenantId: string;
   date: Date;
   status: AttendanceStatus;
@@ -23,6 +24,7 @@ export enum AttendanceStatus {
   PRESENT = "PRESENT",
   ABSENT = "ABSENT",
   LATE = "LATE",
+  LEAVE = "LEAVE",
   EXCUSED = "EXCUSED",
   HALF_DAY = "HALF_DAY",
 }

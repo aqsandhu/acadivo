@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../providers/locale_provider.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/loading_widget.dart';
-import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_widget.dart';
-import '../../widgets/stats_card.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/user_avatar.dart';
-import '../../routing/route_names.dart';
 
 import '../../services/parent_service.dart';
 import '../../services/api_service.dart';
@@ -42,10 +37,17 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
     try {
       final api = ref.read(apiServiceProvider);
       final service = ParentService(api);
+      final child = await service.getChildById(widget.childId);
       final attendance = await service.getChildAttendance(widget.childId);
       final homework = await service.getChildHomework(widget.childId);
       final results = await service.getChildResults(widget.childId);
-      setState(() { _attendance = attendance; _homework = homework; _results = results; _isLoading = false; });
+      setState(() {
+        _child = child;
+        _attendance = attendance;
+        _homework = homework;
+        _results = results;
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() { _error = e.toString(); _isLoading = false; });
     }

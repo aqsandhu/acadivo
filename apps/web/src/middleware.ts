@@ -46,7 +46,7 @@ export function middleware(request: NextRequest) {
         !pathname.startsWith(allowedPrefix) &&
         !pathname.startsWith("/api")
       ) {
-        return NextResponse.redirect(new URL(allowedPrefix + "/dashboard", request.url));
+        return NextResponse.redirect(new URL(allowedPrefix, request.url));
       }
     } catch {
       /* invalid cookie */

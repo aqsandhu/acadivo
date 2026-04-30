@@ -151,7 +151,7 @@ export async function registerSchool(dto: RegisterDTO) {
 
     // Resolve subscription plan ID
     const planName = dto.subscriptionPlan || SubscriptionPlan.FREE;
-    const planRecord = await tx.subscriptionPlan.findFirst({ where: { name: planName } });
+    const planRecord = await tx.platformPlan.findFirst({ where: { name: planName } });
     const planId = planRecord?.id || "00000000-0000-0000-0000-000000000000";
 
     // Create school subscription record
@@ -159,7 +159,7 @@ export async function registerSchool(dto: RegisterDTO) {
       data: {
         tenantId: tenant.id,
         planId,
-        status: "TRIAL" as any,
+        status: SchoolSubscriptionStatus.TRIAL,
         maxTeachers: 10,
         maxStudents: 100,
         startDate: new Date(),
@@ -315,7 +315,7 @@ export async function loginUser(dto: LoginDTO) {
       userId: user.id,
       ipAddress: dto.ipAddress || "0.0.0.0",
       userAgent: dto.userAgent || "",
-      status: "SUCCESS" as any,
+      status: LoginStatus.SUCCESS,
     },
   });
 

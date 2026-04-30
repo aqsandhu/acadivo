@@ -236,7 +236,7 @@ async function processAttendanceAlerts() {
             userId: link.parent.userId,
             title: "Attendance Alert",
             body: `${studentName} has been absent for ${consecutiveAbsences} consecutive days (${absentDates.join(", ")})`,
-            type: "ATTENDANCE_ALERT" as any,
+            type: NotificationType.ATTENDANCE_ALERT,
             data: { studentId: student.userId, days: consecutiveAbsences },
           })),
         });

@@ -18,6 +18,7 @@ import { GraduationCap, Hash, TrendingUp, BookOpen, CreditCard } from "lucide-re
 
 export default function ParentChildDetailPage() {
   const { studentId } = useParams();
+  const [activeTab, setActiveTab] = useState("attendance");
   const [child, setChild] = useState<ChildProfile | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [homework, setHomework] = useState<HomeworkItem[]>([]);
@@ -68,7 +69,7 @@ export default function ParentChildDetailPage() {
             </div>
           )}
 
-          <Tabs value="attendance">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="attendance">Attendance</TabsTrigger>
               <TabsTrigger value="homework">Homework</TabsTrigger>

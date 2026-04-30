@@ -2,10 +2,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../constants/api_constants.dart';
 import '../constants/app_constants.dart';
 import '../storage/preferences.dart';
+import 'offline_queue.dart';
 
 class ApiService {
   late final Dio _dio;
@@ -98,6 +100,41 @@ class ApiService {
           // Handle 500+ - Server errors
           if (error.response != null && error.response!.statusCode! >= 500) {
             _logger.e('Server error: ${error.response?.statusCode}');
+          }
+
+          // Handle network errors - queue for offline if it's a mutating request
+          if (error.type == DioExceptionType.connectionError ||
+              error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.sendTimeout ||
+              error.type == DioExceptionType.receiveTimeout) {
+            final method = error.requestOptions.method;
+            if (method != 'GET') {
+              try {
+                final connectivity = await Connectivity().checkConnectivity();
+                if (connectivity == ConnectivityResult.none) {
+                  _logger.w('Device offline. Queueing ${method} ${error.requestOptions.path}');
+                  final offlineQueue = OfflineQueueService(this);
+                  await offlineQueue.queueAction(
+                    type: OfflineActionType.other,
+                    endpoint: error.requestOptions.path,
+                    method: method,
+                    data: error.requestOptions.data is Map<String, dynamic> 
+                        ? error.requestOptions.data as Map<String, dynamic> 
+                        : null,
+                    queryParams: error.requestOptions.queryParameters,
+                  );
+                  return handler.reject(
+                    DioException(
+                      requestOptions: error.requestOptions,
+                      error: 'Request queued for offline sync',
+                      type: DioExceptionType.connectionError,
+                    ),
+                  );
+                }
+              } catch (_) {
+                // If connectivity check fails, just proceed with normal error handling
+              }
+            }
           }
 
           return handler.next(error);

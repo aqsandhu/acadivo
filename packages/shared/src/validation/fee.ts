@@ -8,7 +8,7 @@ export const createFeeStructureSchema = z.object({
   name: z.string().min(2).max(200),
   classId: z.string().uuid().optional(),
   amount: z.number().positive().max(10000000),
-  frequency: z.enum(["MONTHLY", "QUARTERLY", "SEMESTERLY", "ANNUAL", "ONE_TIME"]),
+  frequency: z.enum(["MONTHLY", "QUARTERLY", "SEMESTERLY", "YEARLY", "ONE_TIME"]),
   dueDay: z.number().int().min(1).max(31),
   lateFee: z.number().min(0).optional(),
   description: z.string().max(1000).optional(),

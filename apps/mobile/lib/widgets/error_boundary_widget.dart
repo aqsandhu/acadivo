@@ -27,7 +27,53 @@ class AppErrorBoundary extends StatefulWidget {
 }
 
 class _AppErrorBoundaryState extends State<AppErrorBoundary> {
-  @override Widget build(BuildContext context) => widget.child;
+  Object? _error;
+  StackTrace? _stackTrace;
+
+  @override
+  void initState() {
+    super.initState();
+    // Catch framework errors in this zone
+    FlutterError.onError = _handleFlutterError;
+  }
+
+  void _handleFlutterError(FlutterErrorDetails details) {
+    if (mounted) {
+      setState(() {
+        _error = details.exception;
+        _stackTrace = details.stack;
+      });
+    }
+    // Still report to console
+    FlutterError.presentError(details);
+  }
+
+  void _reset() {
+    setState(() {
+      _error = null;
+      _stackTrace = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_error != null) {
+      return _AppErrorFallback(
+        message: _error.toString(),
+        onRetry: _reset,
+      );
+    }
+    return widget.child;
+  }
+
+  @override
+  void dispose() {
+    // Only reset if this was the one that set it
+    if (FlutterError.onError == _handleFlutterError) {
+      FlutterError.onError = FlutterError.presentError;
+    }
+    super.dispose();
+  }
 }
 
 class _ErrorFallback extends StatelessWidget {
@@ -50,5 +96,54 @@ class _ErrorFallback extends StatelessWidget {
         Text(message, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant), textAlign: TextAlign.center),
         if (onRetry != null) ...[const SizedBox(height: 24), FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Try Again'))],
       ]),),);
+  }
+}
+
+class _AppErrorFallback extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _AppErrorFallback({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.error_outline, size: 56, color: theme.colorScheme.error),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Something went wrong',
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Restart'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

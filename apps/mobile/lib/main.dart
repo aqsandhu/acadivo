@@ -5,12 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'routing/app_router.dart';
 import 'providers/locale_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/socket_provider.dart';
+import 'providers/connection_provider.dart';
 import 'services/push_notification_service.dart';
 import 'utils/theme.dart';
 import 'utils/constants.dart';
@@ -40,14 +40,28 @@ class AcadivoApp extends ConsumerStatefulWidget {
 }
 
 class _AcadivoAppState extends ConsumerState<AcadivoApp> with WidgetsBindingObserver {
-  @override void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); _initSocket(); }
+  @override void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); _initSocketOnAuth(); }
 
-  void _initSocket() {
+  void _initSocketOnAuth() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (ref.read(isAuthenticatedProvider)) {
-        try { await ref.read(socketProvider.notifier).connect(); } catch (e) { debugPrint('[App] Socket init failed: $e'); }
+      // Wait for auth to be checked, then connect if authenticated
+      ref.listenManual(authProvider, (previous, next) {
+        if (next.isAuthenticated && !next.isLoading) {
+          _initSocket();
+        } else if (!next.isAuthenticated && previous?.isAuthenticated == true) {
+          ref.read(socketProvider.notifier).disconnect();
+        }
+      });
+      // Also check current state immediately
+      final auth = ref.read(authProvider);
+      if (auth.isAuthenticated && !auth.isLoading) {
+        _initSocket();
       }
     });
+  }
+
+  void _initSocket() {
+    try { ref.read(socketProvider.notifier).connect(); } catch (e) { debugPrint('[App] Socket init failed: $e'); }
   }
 
   @override void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -90,23 +104,12 @@ class _OfflineBanner extends ConsumerStatefulWidget {
 }
 
 class _OfflineBannerState extends ConsumerState<_OfflineBanner> {
-  bool _isOffline = false;
-  @override void initState() {
-    super.initState();
-    Connectivity().onConnectivityChanged.listen((result) {
-      if (mounted) setState(() => _isOffline = result == ConnectivityResult.none);
-    });
-    _checkConnectivity();
-  }
-  Future<void> _checkConnectivity() async {
-    final result = await Connectivity().checkConnectivity();
-    if (mounted) setState(() => _isOffline = result == ConnectivityResult.none);
-  }
   @override Widget build(BuildContext context) {
+    final isOffline = ref.watch(connectionProvider) == ConnectionStatus.offline;
     final isUrdu = ref.watch(isRtlProvider);
     return Column(children: [
-      AnimatedContainer(duration: const Duration(milliseconds: 300), height: _isOffline ? 32 : 0, color: Colors.red,
-        child: _isOffline ? Center(child: Text(isUrdu ? 'آف لائن - کوئی انٹرنیٹ کنکشن نہیں' : 'OFFLINE - No Internet',
+      AnimatedContainer(duration: const Duration(milliseconds: 300), height: isOffline ? 32 : 0, color: Colors.red,
+        child: isOffline ? Center(child: Text(isUrdu ? 'آف لائن - کوئی انٹرنیٹ کنکشن نہیں' : 'OFFLINE - No Internet',
           style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600))) : null,
       ),
       Expanded(child: widget.child),

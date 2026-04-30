@@ -10,7 +10,9 @@ export interface Advertisement {
   imageUrl?: string;
   linkUrl?: string;
   placement: AdPlacement;
-  targetAudience: UserRole[];
+  targetAudience: AdTargetAudience;
+  targetCities?: string[];
+  targetSchoolTypes?: string[];
   startDate: Date;
   endDate: Date;
   priority: number;
@@ -20,6 +22,15 @@ export interface Advertisement {
   createdById: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export enum AdTargetAudience {
+  ALL = "ALL",
+  STUDENTS = "STUDENTS",
+  PARENTS = "PARENTS",
+  TEACHERS = "TEACHERS",
+  PRINCIPALS = "PRINCIPALS",
+  ADMIN = "ADMIN",
 }
 
 export enum AdPlacement {

@@ -7,6 +7,13 @@ import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../lib/prisma";
 import { ApiError } from "../../utils/ApiError";
 
+// Extend AuthRequest with childLink for downstream use
+declare module "../../middleware/auth" {
+  interface AuthRequest {
+    childLink?: Awaited<ReturnType<typeof prisma.studentParent.findFirst>>;
+  }
+}
+
 /**
  * Middleware that verifies the :studentId param belongs to the authenticated parent.
  * Use on any route where parents access child-specific data.
@@ -32,6 +39,6 @@ export async function validateChildOwnership(
   }
 
   // Attach the validated link to the request for downstream use
-  (req as any).childLink = link;
+  req.childLink = link;
   next();
 }

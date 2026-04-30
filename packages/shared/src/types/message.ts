@@ -6,7 +6,7 @@ export interface Message {
   id: string;
   senderId: string;
   receiverId?: string;
-  groupId?: string;
+  conversationId?: string;
   tenantId: string;
   content: string;
   messageType: MessageType;
@@ -16,6 +16,7 @@ export interface Message {
   readAt?: Date;
   editedAt?: Date;
   isDeleted: boolean;
+  deletedAt?: Date;
   createdAt: Date;
 }
 
@@ -23,7 +24,7 @@ export enum MessageType {
   TEXT = "TEXT",
   IMAGE = "IMAGE",
   FILE = "FILE",
-  AUDIO = "AUDIO",
+  VOICE = "VOICE",
   VIDEO = "VIDEO",
   ANNOUNCEMENT = "ANNOUNCEMENT",
 }
@@ -41,8 +42,10 @@ export interface Conversation {
   tenantId: string;
   type: ConversationType;
   title?: string;
+  classId?: string;
   lastMessageAt?: Date;
   lastMessagePreview?: string;
+  isActive: boolean;
   unreadCount: Record<string, number>;
   createdAt: Date;
   updatedAt: Date;
@@ -53,6 +56,33 @@ export enum ConversationType {
   GROUP = "GROUP",
   CLASS = "CLASS",
   SCHOOL = "SCHOOL",
+}
+
+export interface ConversationMember {
+  id: string;
+  tenantId: string;
+  conversationId: string;
+  userId?: string;
+  studentId?: string;
+  parentId?: string;
+  role: string;
+  joinedAt: Date;
+  leftAt?: Date;
+  unreadCount: number;
+  lastReadAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MessageReadReceipt {
+  id: string;
+  tenantId: string;
+  messageId: string;
+  userId?: string;
+  studentId?: string;
+  readAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface TypingIndicator {

@@ -5,8 +5,36 @@
 
 import cron from "node-cron";
 import { prisma } from "../config/database";
+import { redis } from "../config/redis";
 import { sendPushNotification } from "./push.service";
 import { logger } from "../utils/logger";
+
+const CRON_LOCK_KEY = "cron:fee_reminder:lock";
+const CRON_LOCK_TTL = 300; // 5 minutes in seconds
+
+/**
+ * Acquire a distributed lock via Redis to prevent cron race conditions.
+ */
+async function acquireCronLock(): Promise<boolean> {
+  try {
+    const result = await redis.set(CRON_LOCK_KEY, "1", "EX", CRON_LOCK_TTL, "NX");
+    return result === "OK";
+  } catch (err: any) {
+    logger.error(`[Cron] Failed to acquire lock: ${err.message}`);
+    return false;
+  }
+}
+
+/**
+ * Release the distributed lock.
+ */
+async function releaseCronLock(): Promise<void> {
+  try {
+    await redis.del(CRON_LOCK_KEY);
+  } catch (err: any) {
+    logger.error(`[Cron] Failed to release lock: ${err.message}`);
+  }
+}
 
 /**
  * Initialize fee reminder cron job.
@@ -15,11 +43,19 @@ import { logger } from "../utils/logger";
 export function initFeeReminderCron() {
   // Run every day at 9:00 AM
   cron.schedule("0 9 * * *", async () => {
+    const hasLock = await acquireCronLock();
+    if (!hasLock) {
+      logger.info("[Cron] Fee reminder job skipped — another instance is running");
+      return;
+    }
+
     logger.info("[Cron] Running daily fee reminder job...");
     try {
       await sendFeeDueReminders();
     } catch (err: any) {
       logger.error(`[Cron] Fee reminder job failed: ${err.message}`);
+    } finally {
+      await releaseCronLock();
     }
   }, {
     scheduled: true,

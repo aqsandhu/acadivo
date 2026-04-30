@@ -3,6 +3,7 @@
  */
 
 export enum UserRole {
+  SUPER_ADMIN = "SUPER_ADMIN",
   ADMIN = "ADMIN",
   PRINCIPAL = "PRINCIPAL",
   TEACHER = "TEACHER",
@@ -19,6 +20,9 @@ export interface User {
   isActive: boolean;
   phone?: string;
   avatar?: string;
+  language?: string;
+  darkMode?: boolean;
+  soundEnabled?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -83,6 +83,9 @@ class ApiConstants {
   static const String feeRecords = '/fee/records';
   static const String feeCollect = '/fee/collect';
 
+  // Q&A
+  static const String qa = '/qa';
+
   // Results
   static const String results = '/results';
   static const String marks = '/marks';

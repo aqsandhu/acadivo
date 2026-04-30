@@ -21,7 +21,7 @@ export enum FeeFrequency {
   MONTHLY = "MONTHLY",
   QUARTERLY = "QUARTERLY",
   SEMESTERLY = "SEMESTERLY",
-  ANNUAL = "ANNUAL",
+  YEARLY = "YEARLY",
   ONE_TIME = "ONE_TIME",
 }
 
@@ -36,26 +36,64 @@ export interface FeePayment {
   fine?: number;
   dueDate: Date;
   paidDate?: Date;
-  status: PaymentStatus;
+  status: FeeStatus;
   method?: PaymentMethod;
   transactionId?: string;
+  receiptNumber?: string;
   remarks?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export enum PaymentStatus {
+export enum FeeStatus {
   PAID = "PAID",
-  PENDING = "PENDING",
+  UNPAID = "UNPAID",
   PARTIAL = "PARTIAL",
-  OVERDUE = "OVERDUE",
   WAIVED = "WAIVED",
+  OVERDUE = "OVERDUE",
 }
 
 export enum PaymentMethod {
   CASH = "CASH",
   BANK_TRANSFER = "BANK_TRANSFER",
+  EASYPAYSA = "EASYPAYSA",
+  JAZZCASH = "JAZZCASH",
   CHEQUE = "CHEQUE",
   CARD = "CARD",
   ONLINE = "ONLINE",
+}
+
+export interface Installment {
+  id: string;
+  tenantId: string;
+  feeRecordId: string;
+  studentId?: string;
+  feeStructureId?: string;
+  amount: number;
+  paidAmount: number;
+  dueDate: Date;
+  paidDate?: Date;
+  status: FeeStatus;
+  paymentMethod?: PaymentMethod;
+  transactionId?: string;
+  receiptNumber?: string;
+  remarks?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FeeDiscount {
+  id: string;
+  tenantId: string;
+  studentId: string;
+  feeStructureId?: string;
+  amount: number;
+  percentage?: number;
+  reason?: string;
+  approvedBy?: string;
+  effectiveDate: Date;
+  expiryDate?: Date;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }

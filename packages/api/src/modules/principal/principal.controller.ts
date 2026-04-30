@@ -29,8 +29,8 @@ export interface CreateAnnouncementData {
 // ── Helpers ──
 
 function getTenantAndUser(req: Request): { tenantId: string; userId: string } | null {
-  const tenantId = (req as any).tenantId;
-  const userId = (req as any).user?.id;
+  const tenantId = req.user?.tenantId;
+  const userId = req.user?.userId;
   if (!tenantId || !userId) return null;
   return { tenantId, userId };
 }

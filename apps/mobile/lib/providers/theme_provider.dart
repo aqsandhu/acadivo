@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/storage_keys.dart';
+import '../storage/preferences.dart';
 
 class ThemeNotifier extends StateNotifier<ThemeMode> {
   ThemeNotifier() : super(ThemeMode.system) {
@@ -11,10 +12,17 @@ class ThemeNotifier extends StateNotifier<ThemeMode> {
   }
 
   Future<void> _loadTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(StorageKeys.themeMode);
-    if (saved != null) {
-      state = _parseThemeMode(saved);
+    try {
+      final saved = Preferences.instance.getToken(); // Just to ensure prefs are init
+      // Actually read from SharedPreferences directly since ThemeMode is stored there
+      final prefs = await SharedPreferences.getInstance();
+      final savedTheme = prefs.getString(StorageKeys.themeMode);
+      if (savedTheme != null) {
+        state = _parseThemeMode(savedTheme);
+      }
+    } catch (e) {
+      // If preferences not initialized yet, try again later
+      state = ThemeMode.system;
     }
   }
 

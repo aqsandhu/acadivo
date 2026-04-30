@@ -33,7 +33,7 @@ function sendCSV(res: Response, filename: string, csv: string) {
 // ── GET /admin/export/students ──
 
 router.get("/students", async (req: Request, res: Response) => {
-  const tenantId = (req as any).tenantId;
+  const tenantId = req.user!.tenantId!;
   const students = await prisma.student.findMany({
     where: { tenantId },
     include: {
@@ -71,7 +71,7 @@ router.get("/students", async (req: Request, res: Response) => {
 // ── GET /admin/export/teachers ──
 
 router.get("/teachers", async (req: Request, res: Response) => {
-  const tenantId = (req as any).tenantId;
+  const tenantId = req.user!.tenantId!;
   const teachers = await prisma.teacher.findMany({
     where: { tenantId },
     include: {
@@ -108,7 +108,7 @@ router.get("/teachers", async (req: Request, res: Response) => {
 // ── GET /admin/export/attendance ──
 
 router.get("/attendance", async (req: Request, res: Response) => {
-  const tenantId = (req as any).tenantId;
+  const tenantId = req.user!.tenantId!;
   const from = (req.query.from as string) || new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
   const to = (req.query.to as string) || new Date().toISOString().split("T")[0];
 
@@ -146,7 +146,7 @@ router.get("/attendance", async (req: Request, res: Response) => {
 // ── GET /admin/export/fee ──
 
 router.get("/fee", async (req: Request, res: Response) => {
-  const tenantId = (req as any).tenantId;
+  const tenantId = req.user!.tenantId!;
   const records = await prisma.feeRecord.findMany({
     where: { tenantId },
     include: {

@@ -158,5 +158,21 @@
   "september": "September",
   "october": "October",
   "november": "November",
-  "december": "December"
+  "december": "December",
+  "q_and_a": "Q & A",
+  "questions": "Questions",
+  "no_questions": "No Questions",
+  "no_questions_yet": "No questions asked yet.",
+  "ask_question": "Ask a question...",
+  "enter_question": "Enter question...",
+  "enter_answer": "Enter answer...",
+  "answer_question": "Answer Question",
+  "edit_answer": "Edit Answer",
+  "add_q_and_a": "Add Q&A",
+  "question_submitted": "Question submitted successfully",
+  "answer_submitted": "Answer submitted successfully",
+  "no_answer_yet": "No answer yet",
+  "answered_by": "Answered by",
+  "answered": "Answered",
+  "coming_soon": "Coming soon"
 }

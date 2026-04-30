@@ -158,5 +158,21 @@
   "september": "ستمبر",
   "october": "اکتوبر",
   "november": "نومبر",
-  "december": "دسمبر"
+  "december": "دسمبر",
+  "q_and_a": "سوال و جواب",
+  "questions": "سوالات",
+  "no_questions": "کوئی سوال نہیں",
+  "no_questions_yet": "ابھی تک کوئی سوال نہیں پوچھا گیا",
+  "ask_question": "سوال پوچھیں...",
+  "enter_question": "سوال درج کریں...",
+  "enter_answer": "جواب درج کریں...",
+  "answer_question": "سوال کا جواب دیں",
+  "edit_answer": "جواب میں ترمیم کریں",
+  "add_q_and_a": "سوال جواب شامل کریں",
+  "question_submitted": "سوال کامیابی سے جمع کرایا گیا",
+  "answer_submitted": "جواب کامیابی سے جمع کرایا گیا",
+  "no_answer_yet": "ابھی تک جواب نہیں",
+  "answered_by": "جواب دینے والا",
+  "answered": "جواب دیا گیا",
+  "coming_soon": "جلد آرہا ہے"
 }

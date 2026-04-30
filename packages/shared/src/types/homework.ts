@@ -8,11 +8,13 @@ export interface Homework {
   description: string;
   subjectId: string;
   classId: string;
+  sectionId: string;
   tenantId: string;
   teacherId: string;
   dueDate: Date;
   attachmentUrls?: string[];
   maxMarks?: number;
+  isActive?: boolean;
   status: HomeworkStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -20,10 +22,9 @@ export interface Homework {
 
 export enum HomeworkStatus {
   PENDING = "PENDING",
-  SUBMITTED = "SUBMITTED",
-  GRADED = "GRADED",
-  LATE = "LATE",
-  OVERDUE = "OVERDUE",
+  ACTIVE = "ACTIVE",
+  CLOSED = "CLOSED",
+  ARCHIVED = "ARCHIVED",
 }
 
 export interface HomeworkSubmission {
@@ -35,12 +36,12 @@ export interface HomeworkSubmission {
   attachments?: string[];
   marks?: number;
   feedback?: string;
-  status: SubmissionStatus;
+  status: HomeworkSubmissionStatus;
 }
 
-export enum SubmissionStatus {
+export enum HomeworkSubmissionStatus {
   PENDING = "PENDING",
   SUBMITTED = "SUBMITTED",
-  GRADED = "GRADED",
   LATE = "LATE",
+  GRADED = "GRADED",
 }

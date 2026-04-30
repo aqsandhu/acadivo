@@ -37,10 +37,11 @@ export enum ExamStatus {
 
 export interface ExamResult {
   id: string;
-  examId: string;
+  examId?: string;
   studentId: string;
   classId: string;
   tenantId: string;
+  academicYear: string;
   marksObtained: number;
   grade?: string;
   percentage?: number;

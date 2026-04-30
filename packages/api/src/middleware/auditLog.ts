@@ -25,7 +25,7 @@ export function auditLog(options: AuditLogOptions): RequestHandler {
 
     res.on("finish", async () => {
       try {
-        const user = (req as any).user;
+        const user = req.user;
         const tenantId = user?.tenantId || (req.headers["x-tenant-id"] as string) || null;
 
         await prisma.auditLog.create({

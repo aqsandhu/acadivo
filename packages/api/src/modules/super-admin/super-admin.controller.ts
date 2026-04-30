@@ -32,13 +32,13 @@ export const getSchool = asyncHandler(async (req: Request, res: Response) => {
 
 export const onboardSchool = asyncHandler(async (req: Request, res: Response) => {
   const createdBy = req.user?.userId!;
-  const logoFile = (req as any).file;
+  const logoFile = (req as (Request & { file?: any })).file;
   const result = await service.onboardSchool({ ...req.body, logoFile }, createdBy);
   res.status(201).json(successResponse(result, "School onboarded successfully"));
 });
 
 export const updateSchool = asyncHandler(async (req: Request, res: Response) => {
-  const logoFile = (req as any).file;
+  const logoFile = (req as (Request & { file?: any })).file;
   const result = await service.updateSchool(req.params.id, { ...req.body, logoFile });
   res.status(200).json(successResponse(result, "School updated successfully"));
 });
@@ -99,13 +99,13 @@ export const listAds = asyncHandler(async (req: Request, res: Response) => {
 
 export const createAd = asyncHandler(async (req: Request, res: Response) => {
   const creatorId = req.user?.userId!;
-  const imageFile = (req as any).file;
+  const imageFile = (req as (Request & { file?: any })).file;
   const result = await service.createAd({ ...req.body, imageFile }, creatorId);
   res.status(201).json(successResponse(result, "Advertisement created"));
 });
 
 export const updateAd = asyncHandler(async (req: Request, res: Response) => {
-  const imageFile = (req as any).file;
+  const imageFile = (req as (Request & { file?: any })).file;
   const result = await service.updateAd(req.params.id, { ...req.body, imageFile });
   res.status(200).json(successResponse(result, "Advertisement updated"));
 });

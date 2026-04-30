@@ -29,6 +29,24 @@ class ParentService {
     }
   }
 
+  // Child details
+  Future<StudentModel?> getChildById(String studentId) async {
+    try {
+      final response = await _apiService.dio.get(
+        '${ApiConstants.parents}/children/$studentId',
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data['data'] ?? response.data;
+        if (data is Map<String, dynamic>) {
+          return StudentModel.fromJson(data);
+        }
+      }
+      return null;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
   // Child attendance
   Future<List<AttendanceModel>> getChildAttendance(
     String studentId, {

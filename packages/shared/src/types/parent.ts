@@ -7,10 +7,8 @@ export interface Parent {
   userId: string;
   tenantId: string;
   occupation?: string;
-  workplace?: string;
-  relation: string;
-  children: string[];
-  isPrimaryContact: boolean;
+  emergencyContact?: string;
+  emergencyRelation?: string;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 import { PrismaClient, NotificationType } from '@prisma/client';
+import { logger } from "../utils/logger";
 
 export interface CreateNotificationData {
   tenantId: string;
@@ -24,6 +25,32 @@ export interface BulkNotificationData {
   data?: Record<string, unknown>;
 }
 
+// ── Socket.io emitter helpers ──
+
+function getIO(): any | undefined {
+  return (global as any).io;
+}
+
+function emitNotification(userId: string, notification: any): void {
+  const io = getIO();
+  if (!io) return;
+  try {
+    io.to(`user:${userId}`).emit("notification", notification);
+  } catch (err: any) {
+    logger.error(`[Notification] Socket emit failed: ${err.message}`);
+  }
+}
+
+function emitUnreadCount(userId: string, tenantId: string, count: number): void {
+  const io = getIO();
+  if (!io) return;
+  try {
+    io.to(`user:${userId}`).emit("unread_count", { tenantId, count });
+  } catch (err: any) {
+    logger.error(`[Notification] Socket unread emit failed: ${err.message}`);
+  }
+}
+
 // ── Create a single notification ──
 
 export async function createNotification(
@@ -42,8 +69,8 @@ export async function createNotification(
     },
   });
 
-  // TODO: Trigger push notification (Firebase, OneSignal, etc.)
-  // await pushService.send({ ... });
+  // Emit real-time notification via Socket.io
+  emitNotification(data.userId, notification);
 
   return notification;
 }
@@ -70,7 +97,11 @@ export async function createBulkNotifications(
     )
   );
 
-  // TODO: Batch push
+  // Emit real-time notifications via Socket.io
+  for (const notification of notifications) {
+    emitNotification(notification.userId, notification);
+  }
+
   return notifications;
 }
 
