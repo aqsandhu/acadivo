@@ -1,19 +1,20 @@
 /**
  * School validation schemas
+ * Aligned with Prisma Tenant fields
  */
 
 import { z } from "zod";
 
 export const createSchoolSchema = z.object({
   name: z.string().min(2).max(200),
-  slug: z.string().min(2).max(100).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
-  address: z.string().min(5).max(500),
+  code: z.string().min(2).max(100).regex(/^[a-zA-Z0-9-]+$/, "Code must be alphanumeric with hyphens"),
+  type: z.enum(["SCHOOL", "COLLEGE", "UNIVERSITY"]),
   city: z.string().min(2).max(100),
-  country: z.string().min(2).max(100),
+  address: z.string().min(5).max(500),
   phone: z.string().min(7).max(20),
   email: z.string().email(),
-  website: z.string().url().optional(),
-  subscriptionTier: z.enum(["FREE", "BASIC", "STANDARD", "PREMIUM"]).default("FREE"),
+  logo: z.string().url().optional(),
+  subscriptionPlan: z.enum(["FREE", "BASIC", "STANDARD", "PREMIUM"]).default("FREE"),
 });
 
 export const updateSchoolSchema = createSchoolSchema.partial();

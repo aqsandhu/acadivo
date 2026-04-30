@@ -1,21 +1,21 @@
 import { describe, it, expect } from 'vitest';
 
 // Type guards and type checking functions
-type UserRole = 'ADMIN' | 'PRINCIPAL' | 'TEACHER' | 'STUDENT' | 'PARENT';
-type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE' | 'HALF_DAY';
-type FeeStatus = 'PENDING' | 'PAID' | 'PARTIAL' | 'OVERDUE' | 'WAIVED';
+type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'PRINCIPAL' | 'TEACHER' | 'STUDENT' | 'PARENT';
+type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE' | 'EXCUSED' | 'HALF_DAY';
+type FeeStatus = 'UNPAID' | 'PAID' | 'PARTIAL' | 'OVERDUE' | 'WAIVED';
 type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 
 function isValidUserRole(role: string): role is UserRole {
-  return ['ADMIN', 'PRINCIPAL', 'TEACHER', 'STUDENT', 'PARENT'].includes(role);
+  return ['SUPER_ADMIN', 'ADMIN', 'PRINCIPAL', 'TEACHER', 'STUDENT', 'PARENT'].includes(role);
 }
 
 function isValidAttendanceStatus(status: string): status is AttendanceStatus {
-  return ['PRESENT', 'ABSENT', 'LATE', 'LEAVE', 'HALF_DAY'].includes(status);
+  return ['PRESENT', 'ABSENT', 'LATE', 'LEAVE', 'EXCUSED', 'HALF_DAY'].includes(status);
 }
 
 function isValidFeeStatus(status: string): status is FeeStatus {
-  return ['PENDING', 'PAID', 'PARTIAL', 'OVERDUE', 'WAIVED'].includes(status);
+  return ['UNPAID', 'PAID', 'PARTIAL', 'OVERDUE', 'WAIVED'].includes(status);
 }
 
 function isValidGender(gender: string): gender is Gender {
@@ -29,6 +29,7 @@ function assertType<T>(value: T): T {
 describe('Type Validation Tests', () => {
   describe('UserRole Type', () => {
     it('should validate all valid user roles', () => {
+      expect(isValidUserRole('SUPER_ADMIN')).toBe(true);
       expect(isValidUserRole('ADMIN')).toBe(true);
       expect(isValidUserRole('PRINCIPAL')).toBe(true);
       expect(isValidUserRole('TEACHER')).toBe(true);
@@ -51,6 +52,7 @@ describe('Type Validation Tests', () => {
       expect(isValidAttendanceStatus('ABSENT')).toBe(true);
       expect(isValidAttendanceStatus('LATE')).toBe(true);
       expect(isValidAttendanceStatus('LEAVE')).toBe(true);
+      expect(isValidAttendanceStatus('EXCUSED')).toBe(true);
       expect(isValidAttendanceStatus('HALF_DAY')).toBe(true);
     });
 
@@ -64,7 +66,7 @@ describe('Type Validation Tests', () => {
 
   describe('FeeStatus Type', () => {
     it('should validate all valid fee statuses', () => {
-      expect(isValidFeeStatus('PENDING')).toBe(true);
+      expect(isValidFeeStatus('UNPAID')).toBe(true);
       expect(isValidFeeStatus('PAID')).toBe(true);
       expect(isValidFeeStatus('PARTIAL')).toBe(true);
       expect(isValidFeeStatus('OVERDUE')).toBe(true);
@@ -73,7 +75,7 @@ describe('Type Validation Tests', () => {
 
     it('should reject invalid fee statuses', () => {
       expect(isValidFeeStatus('paid')).toBe(false);
-      expect(isValidFeeStatus('UNPAID')).toBe(false);
+      expect(isValidFeeStatus('PENDING')).toBe(false);
       expect(isValidFeeStatus('REFUNDED')).toBe(false);
       expect(isValidFeeStatus('')).toBe(false);
     });
@@ -115,7 +117,8 @@ describe('Type Validation Tests', () => {
     it('should work with complex objects', () => {
       const student = assertType({
         id: 'std_001',
-        name: 'Ahmad Raza',
+        firstName: 'Ahmad',
+        lastName: 'Raza',
         class: { id: 'cls_8th_a', name: '8th Grade' },
         subjects: ['Mathematics', 'English', 'Science'],
       });
