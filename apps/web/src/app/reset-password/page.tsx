@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowLeft, Lock, CheckCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockApi } from "@/services/apiClient";
+import { resetPassword } from "@/services/apiClient";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 
@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
     setError("");
     try {
-      const res = await mockApi.resetPassword({
+      const res = await resetPassword({
         otp: data.otp,
         newPassword: data.newPassword,
       });

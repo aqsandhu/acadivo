@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowLeft, KeyRound, CheckCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockApi } from "@/services/apiClient";
+import { forgotPassword, verifyOTP } from "@/services/apiClient";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 
@@ -53,7 +53,7 @@ export default function VerifyOtpPage() {
     setIsLoading(true);
     setError("");
     try {
-      const res = await mockApi.verifyOTP({
+      const res = await verifyOTP({
         phone: phone || undefined,
         email: email || undefined,
         otp: data.otp,
@@ -79,7 +79,7 @@ export default function VerifyOtpPage() {
   const handleResend = async () => {
     setResendTimer(60);
     try {
-      await mockApi.forgotPassword({ phone: phone || undefined, email: email || undefined });
+      await forgotPassword({ phone: phone || undefined, email: email || undefined });
     } catch {
       // ignore
     }

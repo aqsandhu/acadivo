@@ -7,7 +7,7 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ChildProfileCard } from "@/components/dashboard/ChildProfileCard";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getAnnouncements, getChildren, getCurrentUser, getParentStats } from "@/services/apiClient";
 import { useTranslation } from "react-i18next";
 import type { ChildProfile, Announcement } from "@/types";
 import { MessageSquare, CreditCard, Bell, FileBadge, AlertTriangle } from "lucide-react";
@@ -23,10 +23,10 @@ export default function ParentDashboard() {
   useEffect(() => {
     async function load() {
       const [u, s, c, a] = await Promise.all([
-        mockApi.getCurrentUser("PARENT"),
-        mockApi.getParentStats(),
-        mockApi.getChildren(),
-        mockApi.getAnnouncements(),
+        getCurrentUser("PARENT"),
+        getParentStats(),
+        getChildren(),
+        getAnnouncements(),
       ]);
       setUser(u);
       setStats(s);
@@ -47,6 +47,11 @@ export default function ParentDashboard() {
               <h1 className="text-2xl font-bold">{t("common.welcome")}, {user?.name}!</h1>
             )}
             <p className="text-muted-foreground">Parent of {children.length} children</p>
+            {!loading && user?.uniqueId && (
+              <p className="text-sm text-blue-600 mt-1">
+                <span className="font-medium">Your ID is shared with your child:</span> {user.uniqueId}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

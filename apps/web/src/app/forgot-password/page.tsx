@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowLeft, Mail, Send, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockApi } from "@/services/apiClient";
+import { forgotPassword } from "@/services/apiClient";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     setError("");
     try {
-      const res = await mockApi.forgotPassword({
+      const res = await forgotPassword({
         email: data.email || undefined,
         phone: data.phone || undefined,
       });

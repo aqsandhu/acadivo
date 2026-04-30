@@ -107,6 +107,9 @@ export default function LoginPage() {
             {errors.uniqueId && (
               <p className="text-xs text-danger-500">{errors.uniqueId.message}</p>
             )}
+            <p className="text-xs text-muted-foreground">
+              {t("auth.sharedIdHint")}
+            </p>
           </div>
 
           <div className="space-y-1.5">

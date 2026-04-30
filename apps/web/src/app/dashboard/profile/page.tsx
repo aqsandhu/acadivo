@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
-import { mockApi } from "@/services/apiClient";
+import { changePassword, updateProfile } from "@/services/apiClient";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Camera, Lock, User, Mail, Phone, Save, Loader2 } from "lucide-react";
+import { Camera, Lock, User, Mail, Phone, Save, Loader2, Volume2, Bell, Globe } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export default function ProfilePage() {
   const { t } = useTranslation();
@@ -21,10 +24,15 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
   const [profile, setProfile] = useState<Record<string, any>>({});
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
   const [avatar, setAvatar] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [notificationSounds, setNotificationSounds] = useLocalStorage("acadivo-notification-sounds", true);
+  const [pushNotifications, setPushNotifications] = useLocalStorage("acadivo-push-notifications", true);
+  const [language, setLanguage] = useLocalStorage("acadivo-language", "en");
 
   useEffect(() => {
     if (user) {
@@ -56,7 +64,7 @@ export default function ProfilePage() {
     reader.onload = () => setAvatar(reader.result as string);
     reader.readAsDataURL(file);
     try {
-      const res = await mockApi.updateProfile({ avatar: file } as any);
+      const res = await updateProfile({ avatar: file } as any);
       if (res.success) {
         toast.success(t("profile.avatarUpdated"));
       } else {
@@ -94,7 +102,7 @@ export default function ProfilePage() {
     }
     setPasswordSaving(true);
     try {
-      const res = await mockApi.changePassword({
+      const res = await changePassword({
         currentPassword: passwords.current,
         newPassword: passwords.new,
       });
@@ -240,6 +248,86 @@ export default function ProfilePage() {
             <Button variant="outline" onClick={handleChangePassword} disabled={passwordSaving}>
               {passwordSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
               {t("profile.changePasswordBtn")}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Preferences Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("profile.preferences")}</CardTitle>
+            <CardDescription>{t("profile.preferencesDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="notification-sounds" className="flex items-center gap-2">
+                  <Volume2 className="h-4 w-4" />
+                  {t("profile.notificationSounds")}
+                </Label>
+                <p className="text-sm text-muted-foreground">{t("profile.notificationSoundsDesc")}</p>
+              </div>
+              <Switch
+                id="notification-sounds"
+                checked={notificationSounds}
+                onCheckedChange={setNotificationSounds}
+              />
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="push-notifications" className="flex items-center gap-2">
+                  <Bell className="h-4 w-4" />
+                  {t("profile.pushNotifications")}
+                </Label>
+                <p className="text-sm text-muted-foreground">{t("profile.pushNotificationsDesc")}</p>
+              </div>
+              <Switch
+                id="push-notifications"
+                checked={pushNotifications}
+                onCheckedChange={setPushNotifications}
+              />
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="language" className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  {t("profile.language")}
+                </Label>
+                <p className="text-sm text-muted-foreground">{t("profile.languageDesc")}</p>
+              </div>
+              <Select value={language} onValueChange={setLanguage}>
+                <SelectTrigger id="language" className="w-40">
+                  <SelectValue placeholder={t("profile.selectLanguage")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="ur">Urdu</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={async () => {
+                setSettingsSaving(true);
+                try {
+                  const { updateUserSettings } = await import("@/services/apiClient");
+                  await updateUserSettings({
+                    notificationSounds,
+                    pushNotifications,
+                    language,
+                  });
+                  toast.success(t("profile.settingsSaved"));
+                } catch {
+                  toast.error(t("profile.settingsSaveFailed"));
+                } finally {
+                  setSettingsSaving(false);
+                }
+              }}
+              disabled={settingsSaving}
+            >
+              {settingsSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {t("profile.savePreferences")}
             </Button>
           </CardContent>
         </Card>

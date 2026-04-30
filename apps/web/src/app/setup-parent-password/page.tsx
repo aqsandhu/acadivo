@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowLeft, Lock, User, Phone, CheckCircle, AlertTriangle, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockApi } from "@/services/apiClient";
+import { forgotPassword, verifyOTP } from "@/services/apiClient";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 
@@ -59,7 +59,7 @@ export default function SetupParentPasswordPage() {
     }
     setIsLoading(true);
     try {
-      const res = await mockApi.forgotPassword({ phone: phoneValue });
+      const res = await forgotPassword({ phone: phoneValue });
       if (res.success) {
         setOtpSent(true);
         setError("");
@@ -77,7 +77,7 @@ export default function SetupParentPasswordPage() {
     setIsLoading(true);
     setError("");
     try {
-      const verifyRes = await mockApi.verifyOTP({
+      const verifyRes = await verifyOTP({
         phone: data.phone,
         otp: data.otp,
         purpose: "parent_setup",
@@ -112,7 +112,7 @@ export default function SetupParentPasswordPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             {success
               ? t("auth.parentSetupSuccess")
-              : "Set up your parent account to monitor your child's progress."}
+              : "Set up your parent account password. You and your child share the same ID — use different passwords to access your respective accounts."}
           </p>
         </div>
 
