@@ -260,13 +260,10 @@ services:
 
   # ── Loki (Log Aggregation) ───────────────────────────────────────────────
   loki:
+    image: grafana/loki:2.9.0
     environment:
       - LOKI_USER=${LOKI_USER:-loki}
       - LOKI_PASSWORD=${LOKI_PASSWORD}
-    image: grafana/loki:
-    environment:
-      - LOKI_USER=${LOKI_USER:-loki}
-      - LOKI_PASSWORD=${LOKI_PASSWORD}2.9.0
     container_name: acadivo-loki
     restart: always
     ports:
@@ -277,6 +274,11 @@ services:
     command: -config.file=/etc/loki/local-config.yaml
     networks:
       - monitoring-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   # ── Promtail (Log Shipper) ─────────────────────────────────────────────────
   promtail:

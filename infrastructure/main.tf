@@ -17,14 +17,13 @@ terraform {
     }
   }
 
-  # Uncomment to use remote state (recommended for team use)
-  # backend "s3" {
-  #   bucket         = "acadivo-terraform-state"
-  #   key            = "infrastructure/terraform.tfstate"
-  #   region         = "ap-south-1"
-  #   encrypt        = true
-  #   dynamodb_table = "acadivo-terraform-locks"
-  # }
+  backend "s3" {
+    bucket         = "acadivo-terraform-state"
+    key            = "infrastructure/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "acadivo-terraform-locks"
+  }
 }
 
 provider "aws" {
