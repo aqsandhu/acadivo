@@ -1,7 +1,10 @@
 import { ReportRequestStatus, ReportRequestType } from "@prisma/client";
 import { prisma } from "../../config/database";
 import { ApiError } from "../../utils/ApiError";
-import puppeteer from "puppeteer-core";
+import { generatePDF } from "../../utils/pdf";
+import { uploadToCloudinary } from "../../utils/upload";
+import { logger } from "../../utils/logger";
+import { summarizeAttendance } from "../../lib/academic";
 
 // ──────────────────────────────────────────────
 // Report Request Service
@@ -176,22 +179,10 @@ export async function generateReport(
     principalRemarks: data.principalRemarks || "",
   });
 
-  // Generate actual PDF using puppeteer-core
+  // Generate actual PDF using generatePDF utility
   let pdfBuffer: Buffer;
   try {
-    const browser = await puppeteer.launch({
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-    const page = await browser.newPage();
-    await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
-    pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20px", right: "20px", bottom: "20px", left: "20px" },
-    });
-    await browser.close();
+    pdfBuffer = await generatePDF(htmlTemplate, { format: "A4", printBackground: true });
   } catch (err: any) {
     throw ApiError.internal(`PDF generation failed: ${err.message}`, "PDF_GENERATION_FAILED");
   }
@@ -479,4 +470,254 @@ function getBehaviorRating(attendancePercentage: string): string {
   if (pct >= 85) return "Good";
   if (pct >= 75) return "Satisfactory";
   return "Needs Improvement";
+}
+.logo ? `<img src="${tenant.logo}" alt="School Logo" style="max-height:60px;margin-bottom:10px;" />` : ""}
+      <h1>${tenant?.name || "School Name"}</h1>
+      <p>${tenant?.address || ""}${tenant?.city ? `, ${tenant.city}` : ""}</p>
+      <p>Phone: ${tenant?.phone || "N/A"}</p>
+      <h2 style="margin-top:15px;color:#27ae60;">Student Progress Report</h2>
+    </div>
+
+    <div class="student-info">
+      <div class="student-photo">
+        ${student.user.avatar ? `<img src="${student.user.avatar}" style="width:100%;height:100%;object-fit:cover;" />` : "No Photo"}
+      </div>
+      <div class="info-grid">
+        <div class="info-row"><span class="info-label">Name:</span> ${student.user.firstName} ${student.user.lastName}</div>
+        <div class="info-row"><span class="info-label">Class:</span> ${student.class?.name || "N/A"}</div>
+        <div class="info-row"><span class="info-label">Roll No:</span> ${student.rollNumber}</div>
+        <div class="info-row"><span class="info-label">Section:</span> ${student.section?.name || "N/A"}</div>
+      </div>
+    </div>
+
+    <div class="section-title">Academic Performance</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Subject</th><th>Total Marks</th><th>Obtained</th><th>Percentage</th><th>Grade</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${subjectRows}
+        ${result ? `
+        <tr style="font-weight:bold;background:#ecf0f1;">
+          <td style="padding:8px;border:1px solid #ddd;">Overall</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.totalMarks}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.obtainedMarks}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.percentage}%</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.grade}</td>
+        </tr>` : `<tr><td colspan="5" style="padding:8px;border:1px solid #ddd;text-align:center;">No result data available</td></tr>`}
+      </tbody>
+    </table>
+
+    <div class="section-title">Attendance Summary</div>
+    <div class="attendance-box">
+      <div class="att-item"><div class="count">${attendance.presentCount}</div><div class="label">Present</div></div>
+      <div class="att-item"><div class="count">${attendance.absentCount}</div><div class="label">Absent</div></div>
+      <div class="att-item"><div class="count">${attendance.lateCount}</div><div class="label">Late</div></div>
+      <div class="att-item"><div class="count">${attendance.leaveCount}</div><div class="label">Leave</div></div>
+      <div class="att-item"><div class="count">${attendance.attendancePercentage}%</div><div class="label">Rate</div></div>
+    </div>
+
+    <div class="section-title">Behavior Assessment</div>
+    <div class="behavior-box">
+      <p><strong>Rating:</strong> ${behaviorRating}</p>
+      <p><strong>Attendance Impact:</strong> ${attendance.attendancePercentage}% attendance rate</p>
+    </div>
+
+    <div class="section-title">Teacher Comments</div>
+    <div class="comments-box">${teacherRemarks || "No comments provided."}</div>
+
+    <div class="section-title">Principal Comments</div>
+    <div class="comments-box">${principalRemarks || "No comments provided."}</div>
+
+    <div class="signature-area">
+      <div class="signature-box">
+        <div class="signature-line">Class Teacher</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-line">Principal</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Report generated on ${new Date().toLocaleDateString("en-PK")} via Acadivo
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function getBehaviorRating(attendancePercentage: string): string {
+  const pct = parseFloat(attendancePercentage);
+  if (pct >= 95) return "Excellent";
+  if (pct >= 85) return "Good";
+  if (pct >= 75) return "Satisfactory";
+  return "Needs Improvement";
+}
+
+// ──────────────────────────────────────────────
+// Progress Report HTML Builder
+// ──────────────────────────────────────────────
+
+interface ProgressReportData {
+  tenant: { name: string; address: string | null; logo: string | null; city: string | null; phone: string } | null;
+  student: {
+    user: { firstName: string; lastName: string; avatar: string | null };
+    rollNumber: string;
+    class: { id: string; name: string } | null;
+    section: { id: string; name: string } | null;
+    parentLinks: any[];
+  };
+  attendance: {
+    present: number;
+    absent: number;
+    late: number;
+    leave: number;
+    halfDay: number;
+    total: number;
+    percentage: number;
+  };
+  marks: Array<{
+    subject: { name: string; code: string };
+    totalMarks: number;
+    obtainedMarks: number;
+    percentage: number;
+    grade: string;
+    examType: string;
+  }>;
+  result: {
+    totalMarks: number;
+    obtainedMarks: number;
+    percentage: number;
+    grade: string;
+    status: string;
+    resultDetails: Array<{
+      subject: { name: string; code: string };
+      totalMarks: number;
+      obtainedMarks: number;
+      grade: string;
+    }>;
+  } | null;
+  teacherRemarks: string;
+  requestType: string;
+}
+
+function buildProgressReportHtml(data: ProgressReportData): string {
+  const { tenant, student, attendance, marks, result, teacherRemarks, requestType } = data;
+
+  const subjectRows = marks
+    .map(
+      (m) => `
+      <tr>
+        <td style="padding:8px;border:1px solid #ddd;">${m.subject.name} (${m.subject.code})</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center;">${m.totalMarks}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center;">${m.obtainedMarks}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center;">${m.percentage}%</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:bold;">${m.grade}</td>
+      </tr>`
+    )
+    .join("");
+
+  const attendancePct = attendance.total > 0 ? ((attendance.present / attendance.total) * 100).toFixed(1) : "0.0";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${requestType} Report - ${student.user.firstName} ${student.user.lastName}</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
+    .container { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; padding: 30px; }
+    .header { text-align: center; border-bottom: 3px solid #2c3e50; padding-bottom: 15px; margin-bottom: 25px; }
+    .header h1 { margin: 0; color: #2c3e50; font-size: 28px; }
+    .header p { margin: 5px 0; color: #666; }
+    .student-info { display: flex; gap: 20px; margin-bottom: 25px; }
+    .student-photo { width: 100px; height: 120px; border: 1px solid #ddd; background: #f5f5f5; display: flex; align-items: center; justify-content: center; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; }
+    .info-row { display: flex; }
+    .info-label { font-weight: bold; width: 120px; color: #555; }
+    .section-title { background: #2c3e50; color: white; padding: 8px 12px; margin: 20px 0 10px; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    th { background: #34495e; color: white; padding: 8px; border: 1px solid #ddd; }
+    .attendance-box { display: flex; gap: 15px; margin-bottom: 15px; }
+    .att-item { flex: 1; text-align: center; padding: 12px; border: 1px solid #ddd; border-radius: 4px; }
+    .att-item .count { font-size: 24px; font-weight: bold; color: #2c3e50; }
+    .att-item .label { font-size: 12px; color: #666; text-transform: uppercase; }
+    .comments-box { padding: 12px; border: 1px solid #ddd; border-radius: 4px; min-height: 60px; }
+    .signature-area { margin-top: 40px; display: flex; justify-content: space-between; }
+    .signature-box { text-align: center; width: 200px; }
+    .signature-line { border-top: 1px solid #333; margin-top: 40px; padding-top: 5px; }
+    .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      ${tenant?.logo ? `<img src="${tenant.logo}" alt="School Logo" style="max-height:60px;margin-bottom:10px;" />` : ""}
+      <h1>${tenant?.name || "School Name"}</h1>
+      <p>${tenant?.address || ""}${tenant?.city ? `, ${tenant.city}` : ""}</p>
+      <p>Phone: ${tenant?.phone || "N/A"}</p>
+      <h2 style="margin-top:15px;color:#27ae60;">${requestType} Report</h2>
+    </div>
+
+    <div class="student-info">
+      <div class="student-photo">
+        ${student.user.avatar ? `<img src="${student.user.avatar}" style="width:100%;height:100%;object-fit:cover;" />` : "No Photo"}
+      </div>
+      <div class="info-grid">
+        <div class="info-row"><span class="info-label">Name:</span> ${student.user.firstName} ${student.user.lastName}</div>
+        <div class="info-row"><span class="info-label">Class:</span> ${student.class?.name || "N/A"}</div>
+        <div class="info-row"><span class="info-label">Roll No:</span> ${student.rollNumber}</div>
+        <div class="info-row"><span class="info-label">Section:</span> ${student.section?.name || "N/A"}</div>
+      </div>
+    </div>
+
+    <div class="section-title">Academic Performance</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Subject</th><th>Total Marks</th><th>Obtained</th><th>Percentage</th><th>Grade</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${subjectRows || `<tr><td colspan="5" style="padding:8px;border:1px solid #ddd;text-align:center;">No marks available</td></tr>`}
+        ${result ? `
+        <tr style="font-weight:bold;background:#ecf0f1;">
+          <td style="padding:8px;border:1px solid #ddd;">Overall</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.totalMarks}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.obtainedMarks}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.percentage}%</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center;">${result.grade}</td>
+        </tr>` : ""}
+      </tbody>
+    </table>
+
+    <div class="section-title">Attendance Summary</div>
+    <div class="attendance-box">
+      <div class="att-item"><div class="count">${attendance.present}</div><div class="label">Present</div></div>
+      <div class="att-item"><div class="count">${attendance.absent}</div><div class="label">Absent</div></div>
+      <div class="att-item"><div class="count">${attendance.late}</div><div class="label">Late</div></div>
+      <div class="att-item"><div class="count">${attendance.leave}</div><div class="label">Leave</div></div>
+      <div class="att-item"><div class="count">${attendancePct}%</div><div class="label">Rate</div></div>
+    </div>
+
+    <div class="section-title">Teacher Comments</div>
+    <div class="comments-box">${teacherRemarks || "No comments provided."}</div>
+
+    <div class="signature-area">
+      <div class="signature-box">
+        <div class="signature-line">Class Teacher</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-line">Principal</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Report generated on ${new Date().toLocaleDateString("en-PK")} via Acadivo
+    </div>
+  </div>
+</body>
+</html>`;
 }

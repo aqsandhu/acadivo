@@ -24,6 +24,8 @@ router.post("/resend-otp", authLimiter, validateBody(validator.resendOTPValidato
 router.post("/verify-2fa", validateBody(validator.verify2FAValidator), controller.verify2FA);
 router.post("/2fa/login", validateBody(validator.verify2FAValidator), controller.verify2FALogin);
 router.post("/setup-parent-password", validateBody(validator.setupParentPasswordValidator), controller.setupParentPassword);
+router.post("/parent/initiate-password-setup", validateBody(validator.parentIdValidator), controller.initiateParentPasswordSetup);
+router.post("/parent/verify-otp-set-password", validateBody(validator.verifyParentOTPValidator), controller.verifyParentOTPAndSetPassword);
 
 // Authenticated routes
 router.post("/logout", authMiddleware, validateBody(validator.logoutValidator), controller.logout);

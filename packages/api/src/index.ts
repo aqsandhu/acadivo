@@ -26,7 +26,11 @@ import qaRoutes from "./modules/qa/qa.routes";
 import examRoutes from "./modules/exam/exam.routes";
 import healthRoutes from "./modules/health/health.routes";
 import exportRoutes from "./modules/export/export.routes";
-// import importRoutes from "./modules/import/import.routes"; // Module not yet implemented
+import homeworkRoutes from "./modules/homework/homework.routes";
+import timetableRoutes from "./modules/timetable/timetable.routes";
+import attendanceRoutes from "./modules/attendance/attendance.routes";
+import markRoutes from "./modules/mark/mark.routes";
+import importRoutes from "./modules/import/import.routes";
 import { getPreferences, updatePreferences } from "./modules/user/user.preferences.controller";
 
 // Middleware
@@ -210,9 +214,13 @@ app.use(`${API_V1}/advertisement`, authMiddleware, tenantGuard(), advertisementR
 app.use(`${API_V1}/upload`, authMiddleware, tenantGuard(), uploadLimiter, uploadRoutes);
 app.use(`${API_V1}/qa`, authMiddleware, tenantGuard(), qaRoutes);
 app.use(`${API_V1}/exams`, authMiddleware, tenantGuard(), examRoutes);
+app.use(`${API_V1}/homework`, authMiddleware, tenantGuard(), homeworkRoutes);
+app.use(`${API_V1}/timetable`, authMiddleware, tenantGuard(), timetableRoutes);
+app.use(`${API_V1}/attendance`, authMiddleware, tenantGuard(), attendanceRoutes);
+app.use(`${API_V1}/marks`, authMiddleware, tenantGuard(), markRoutes);
 app.use(`${API_V1}/health`, healthRoutes);
 app.use(`${API_V1}/export`, authMiddleware, tenantGuard(), authorize("ADMIN", "PRINCIPAL", "SUPER_ADMIN"), exportRoutes);
-// app.use(`${API_V1}/import`, authMiddleware, tenantGuard(), authorize("ADMIN", "PRINCIPAL", "SUPER_ADMIN"), importRoutes); // Disabled - module not yet implemented
+app.use(`${API_V1}/import`, authMiddleware, tenantGuard(), authorize("ADMIN", "PRINCIPAL", "SUPER_ADMIN"), importRoutes);
 
 // ── User Preferences ──
 app.get(`${API_V1}/user/preferences`, authMiddleware, tenantGuard(), getPreferences);
