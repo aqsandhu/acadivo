@@ -94,6 +94,14 @@ io.on("connection", (socket) => {
   // Real-time messaging events
   socket.on("send_message", async (data: { receiverId: string; content: string; messageType?: string }) => {
     try {
+      // Verify receiver belongs to the same tenant
+      const receiver = await prisma.user.findFirst({
+        where: { id: data.receiverId, tenantId: user.tenantId },
+      });
+      if (!receiver) {
+        socket.emit("error", { message: "Receiver not found in your school" });
+        return;
+      }
       const message = await prisma.message.create({
         data: {
           tenantId: user.tenantId,
@@ -117,15 +125,20 @@ io.on("connection", (socket) => {
 
   socket.on("mark_read", async (data: { messageId: string }) => {
     try {
+      // Verify message exists and belongs to user's tenant
+      const message = await prisma.message.findFirst({
+        where: { id: data.messageId, receiverId: user.userId, tenantId: user.tenantId },
+      });
+      if (!message) {
+        socket.emit("error", { message: "Message not found" });
+        return;
+      }
       await prisma.message.update({
-        where: { id: data.messageId, receiverId: user.userId },
+        where: { id: data.messageId },
         data: { isRead: true, readAt: new Date() },
       });
       // Notify sender
-      const message = await prisma.message.findUnique({ where: { id: data.messageId } });
-      if (message) {
-        io.to(`user:${message.senderId}`).emit("message_read", { messageId: data.messageId, readAt: new Date() });
-      }
+      io.to(`user:${message.senderId}`).emit("message_read", { messageId: data.messageId, readAt: new Date() });
     } catch (err: any) {
       socket.emit("error", { message: err.message });
     }

@@ -34,8 +34,8 @@ function getDayOfWeek() {
 // ═══════════════════════════════════════════════
 
 export async function getTeacherDashboard(userId: string, tenantId: string) {
-  const teacher = await prisma.teacher.findUnique({
-    where: { userId },
+  const teacher = await prisma.teacher.findFirst({
+    where: { userId, user: { tenantId } },
     include: {
       subjects: { include: { class: true, section: true, subject: true } },
       assignedClass: true,

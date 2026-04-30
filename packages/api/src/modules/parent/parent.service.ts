@@ -233,8 +233,8 @@ export async function getChildHomework(parentId: string, tenantId: string, stude
   const link = await prisma.studentParent.findFirst({ where: { parentId, studentId } });
   if (!link) throw ApiError.forbidden("Not your child");
 
-  const student = await prisma.student.findUnique({ where: { userId: studentId } });
-  if (!student || student.tenantId !== tenantId) throw ApiError.notFound("Student not found");
+  const student = await prisma.student.findFirst({ where: { userId: studentId, tenantId } });
+  if (!student) throw ApiError.notFound("Student not found");
 
   const homeworks = await prisma.homework.findMany({
     where: { classId: student.classId, sectionId: student.sectionId, tenantId, isActive: true },
