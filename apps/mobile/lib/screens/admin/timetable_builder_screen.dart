@@ -13,6 +13,7 @@ import '../../routing/route_names.dart';
 
 import '../../services/admin_service.dart';
 import '../../services/api_service.dart';
+import '../../models/timetable_entry_model.dart';
 
 class TimetableBuilderScreen extends ConsumerStatefulWidget {
   const TimetableBuilderScreen({super.key});
@@ -23,7 +24,9 @@ class TimetableBuilderScreen extends ConsumerStatefulWidget {
 class _TimetableBuilderScreenState extends ConsumerState<TimetableBuilderScreen> {
   bool _isLoading = true;
   String? _error;
-  List<Map<String, dynamic>> _entries = [];
+  List<TimetableEntryModel> _entries = [];
+  String _selectedClassId = '';
+  String _selectedSectionId = '';
 
   @override
   void initState() { super.initState(); _loadData(); }
@@ -31,10 +34,44 @@ class _TimetableBuilderScreenState extends ConsumerState<TimetableBuilderScreen>
   Future<void> _loadData() async {
     setState(() { _isLoading = true; _error = null; });
     try {
-      // Timetable data would come from admin API
-      setState(() { _entries = []; _isLoading = false; });
+      await _loadTimetable();
     } catch (e) {
       setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
+
+  Future<void> _loadTimetable() async {
+    if (_selectedClassId.isEmpty || _selectedSectionId.isEmpty) {
+      setState(() { _entries = []; _isLoading = false; });
+      return;
+    }
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = AdminService(api);
+      final data = await service.getTimetable(_selectedClassId, _selectedSectionId);
+      setState(() { _entries = data; _isLoading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
+
+  Future<void> _saveEntry(TimetableEntryModel entry) async {
+    try {
+      final api = ref.read(apiServiceProvider);
+      final service = AdminService(api);
+      await service.createTimetableEntry(entry.toJson());
+      await _loadTimetable();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ref.read(isRtlProvider) ? 'ٹیبل محفوظ ہو گیا' : 'Timetable entry saved')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 

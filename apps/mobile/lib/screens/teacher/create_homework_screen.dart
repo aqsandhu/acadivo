@@ -25,9 +25,29 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   bool _isLoading = false;
+  DateTime? _dueDate;
+
+  Future<void> _pickDueDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dueDate ?? now.add(const Duration(days: 7)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _dueDate = picked);
+    }
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_dueDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ref.read(isRtlProvider) ? 'تاریخ منتخب کریں' : 'Please select a due date')),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       final api = ref.read(apiServiceProvider);
@@ -35,7 +55,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
       await service.createHomework({
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'dueDate': DateTime.now().add(const Duration(days: 7)).toIso8601String(),
+        'dueDate': _dueDate!.toIso8601String(),
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -96,6 +116,26 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   validator: (v) => v == null || v.isEmpty ? (isUrdu ? 'تفصیل درج کریں' : 'Please enter description') : null,
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: _pickDueDate,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: isUrdu ? 'آخری تاریخ' : 'Due Date',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      suffixIcon: const Icon(Icons.calendar_today),
+                    ),
+                    child: Text(
+                      _dueDate != null
+                          ? '${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}'
+                          : (isUrdu ? 'تاریخ منتخب کریں' : 'Select date'),
+                      style: TextStyle(
+                        color: _dueDate != null ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(

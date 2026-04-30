@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'routing/app_router.dart';
+import 'routing/app_navigator.dart';
 import 'providers/locale_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
@@ -89,6 +90,7 @@ class _AcadivoAppState extends ConsumerState<AcadivoApp> with WidgetsBindingObse
       supportedLocales: AppConstants.supportedLocales,
       localizationsDelegates: AppConstants.localizationsDelegates,
       routerConfig: router,
+      navigatorKey: AppNavigator.navigatorKey,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
         child: _OfflineBanner(child: ErrorBoundaryWidget(fallbackTitle: 'Navigation Error', child: child!)),

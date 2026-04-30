@@ -12,14 +12,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
 
   return GoRouter(
-    initialLocation: RouteNames.login,
+    initialLocation: RouteNames.splash,
     redirect: (context, state) {
       // Auth state is now available here through Riverpod context
       // But for simplicity, we'll check through authState
       final isLoggedIn = authState.isAuthenticated;
       final isAuthRoute = state.matchedLocation == RouteNames.login ||
           state.matchedLocation == RouteNames.forgotPassword ||
-          state.matchedLocation == RouteNames.resetPassword;
+          state.matchedLocation == RouteNames.resetPassword ||
+          state.matchedLocation == RouteNames.splash;
 
       if (!isLoggedIn && !isAuthRoute) {
         return RouteNames.login;
@@ -33,6 +34,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // Splash
+      GoRoute(
+        path: RouteNames.splash,
+        builder: (context, state) => const SplashScreen(),
+      ),
+
+      // Dashboard redirect based on role
+      GoRoute(
+        path: RouteNames.dashboard,
+        redirect: (context, state) {
+          final role = authState.user?.role;
+          switch (role) {
+            case UserRole.schoolAdmin: return RouteNames.adminDashboard;
+            case UserRole.principal: return RouteNames.principalDashboard;
+            case UserRole.teacher: return RouteNames.teacherDashboard;
+            case UserRole.student: return RouteNames.studentDashboard;
+            case UserRole.parent: return RouteNames.parentDashboard;
+            case UserRole.superAdmin: return RouteNames.superAdminDashboard;
+            default: return RouteNames.login;
+          }
+        },
+      ),
+
       // Auth Routes
       GoRoute(
         path: RouteNames.login,

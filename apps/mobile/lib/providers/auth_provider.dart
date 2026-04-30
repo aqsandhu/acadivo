@@ -25,7 +25,7 @@ class AuthState {
   /// Redirect route based on user role
   String? get redirectRoute {
     switch (user?.role) {
-      case UserRole.admin:
+      case UserRole.schoolAdmin:
         return '/admin/dashboard';
       case UserRole.principal:
         return '/principal/dashboard';

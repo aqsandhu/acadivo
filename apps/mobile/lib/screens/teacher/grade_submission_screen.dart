@@ -17,7 +17,14 @@ import '../../models/student_model.dart';
 
 class GradeSubmissionScreen extends ConsumerStatefulWidget {
   final String? classId;
-  const GradeSubmissionScreen({super.key, this.classId});
+  final String examType;
+  final String subjectId;
+  const GradeSubmissionScreen({
+    super.key,
+    this.classId,
+    this.examType = 'midterm',
+    this.subjectId = '',
+  });
   @override
   ConsumerState<GradeSubmissionScreen> createState() => _GradeSubmissionScreenState();
 }
@@ -29,11 +36,16 @@ class _GradeSubmissionScreenState extends ConsumerState<GradeSubmissionScreen> {
   Map<String, TextEditingController> _controllers = {};
   final _formKey = GlobalKey<FormState>();
   bool _submitting = false;
-  String _examType = 'midterm';
-  String _subjectId = '';
+  late String _examType;
+  late String _subjectId;
 
   @override
-  void initState() { super.initState(); _loadData(); }
+  void initState() {
+    super.initState();
+    _examType = widget.examType;
+    _subjectId = widget.subjectId;
+    _loadData();
+  }
 
   Future<void> _loadData() async {
     setState(() { _isLoading = true; _error = null; });

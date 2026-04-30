@@ -9,6 +9,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../constants/api_constants.dart';
 import '../storage/preferences.dart';
 import '../storage/secure_storage.dart';
+import '../routing/app_navigator.dart';
 import 'api_service.dart';
 
 @pragma('vm:entry-point')
@@ -137,15 +138,43 @@ class PushNotificationService {
         android: AndroidNotificationDetails(channelId, channelName, importance: Importance.high, priority: Priority.high,
           icon: message.notification?.android?.smallIcon ?? '@mipmap/ic_launcher'),
         iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
-      ), payload: data['route'] ?? data['screen'] ?? '',
+      ), payload: data['route'] ?? data['screen'] ?? data['type'] ?? '',
     );
   }
 
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload != null && response.payload!.isNotEmpty) {
       debugPrint('Notification tapped: ${response.payload}');
-      // Store the pending route for the app to handle after navigation is ready
-      _pendingNotificationPayload = response.payload;
+      _handleNotificationTapFromPayload(response.payload!);
+    }
+  }
+
+  void _handleMessageOpenedApp(RemoteMessage message) {
+    debugPrint('Message opened app: ${message.messageId}');
+    _handleNotificationTap(message);
+  }
+
+  void _handleNotificationTap(RemoteMessage message) {
+    final type = message.data['type'];
+    final id = message.data['id'];
+    switch (type) {
+      case 'MESSAGE': AppNavigator.goToChat(conversationId: id); break;
+      case 'HOMEWORK': AppNavigator.goToHomework(homeworkId: id); break;
+      case 'REPORT_READY': AppNavigator.goToReports(); break;
+      case 'FEE_DUE': AppNavigator.goToFee(); break;
+      case 'ANNOUNCEMENT': AppNavigator.goToAnnouncements(); break;
+      default: AppNavigator.goToLogin();
+    }
+  }
+
+  void _handleNotificationTapFromPayload(String payload) {
+    switch (payload) {
+      case 'message': AppNavigator.goToChat(conversationId: ''); break;
+      case 'homework': AppNavigator.goToHomework(homeworkId: ''); break;
+      case 'report': AppNavigator.goToReports(); break;
+      case 'fee': AppNavigator.goToFee(); break;
+      case 'announcement': AppNavigator.goToAnnouncements(); break;
+      default: AppNavigator.goToLogin();
     }
   }
 
@@ -156,14 +185,6 @@ class PushNotificationService {
   @pragma('vm:entry-point')
   static void _onBackgroundNotificationTap(NotificationResponse response) {
     debugPrint('Background notification tapped: ${response.payload}');
-  }
-
-  void _handleMessageOpenedApp(RemoteMessage message) {
-    debugPrint('Message opened app: ${message.messageId}');
-    final route = message.data['route'] ?? message.data['screen'];
-    if (route != null && route.isNotEmpty) {
-      _pendingNotificationPayload = route;
-    }
   }
 
   Future<String?> getToken() async {

@@ -4,13 +4,14 @@ import 'bottom_nav_bar.dart';
 import 'drawer_menu.dart';
 
 class AppScaffold extends StatelessWidget {
-  final String title;
-  final Widget body;
+  final String? title;
+  final Widget? body;
+  final Widget? child;
   final List<Widget>? actions;
   final bool showBackButton;
   final bool showBottomNav;
   final bool showDrawer;
-  final int currentNavIndex;
+  final int currentIndex;
   final ValueChanged<int>? onNavChanged;
   final String? role;
   final Widget? floatingActionButton;
@@ -21,13 +22,14 @@ class AppScaffold extends StatelessWidget {
 
   const AppScaffold({
     super.key,
-    required this.title,
-    required this.body,
+    this.title,
+    this.body,
+    this.child,
     this.actions,
     this.showBackButton = true,
     this.showBottomNav = false,
     this.showDrawer = false,
-    this.currentNavIndex = 0,
+    this.currentIndex = 0,
     this.onNavChanged,
     this.role,
     this.floatingActionButton,
@@ -40,15 +42,18 @@ class AppScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final content = child ?? body;
 
     return Scaffold(
       backgroundColor: backgroundColor ?? theme.colorScheme.background,
-      appBar: customAppBar ?? CustomAppBar(
-        title: title,
-        actions: actions,
-        showBackButton: showBackButton,
-        isUrdu: isUrdu,
-      ),
+      appBar: child == null
+          ? (customAppBar ?? CustomAppBar(
+              title: title ?? '',
+              actions: actions,
+              showBackButton: showBackButton,
+              isUrdu: isUrdu,
+            ))
+          : null,
       drawer: showDrawer
           ? DrawerMenu(
               userName: 'User',
@@ -56,12 +61,12 @@ class AppScaffold extends StatelessWidget {
               items: const [],
             )
           : null,
-      body: body,
+      body: content,
       floatingActionButton: floatingActionButton,
       bottomSheet: bottomSheet,
       bottomNavigationBar: showBottomNav && role != null
           ? BottomNavBar(
-              currentIndex: currentNavIndex,
+              currentIndex: currentIndex,
               onTap: onNavChanged ?? (_) {},
               role: role!,
             )

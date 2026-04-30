@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../providers/locale_provider.dart';
+import '../../widgets/app_scaffold.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -55,81 +56,97 @@ class _StudentDashboardScreenState extends ConsumerState<StudentDashboardScreen>
     }
   }
 
+  void _onNavChanged(int index) {
+    switch (index) {
+      case 0: break;
+      case 1: context.push(RouteNames.studentTimetable); break;
+      case 2: context.push(RouteNames.studentHomework); break;
+      case 3: context.push(RouteNames.studentMessages); break;
+      case 4: context.push(RouteNames.profile); break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isUrdu = ref.watch(isRtlProvider);
     final theme = Theme.of(context);
     return Directionality(
       textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
-        appBar: CustomAppBar(
-          title: isUrdu ? 'طالب علم ڈیش بورڈ' : 'Student Dashboard',
-          actions: [
-            IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () => context.push(RouteNames.notifications)),
-          ],
-          isUrdu: isUrdu,
-        ),
-        body: _isLoading && _todayClasses.isEmpty
-            ? const Center(child: LoadingWidget())
-            : _error != null && _todayClasses.isEmpty
-                ? AppErrorWidget(message: _error!, onRetry: _loadData)
-                : RefreshIndicator(
-                    onRefresh: _loadData,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(isUrdu ? 'آج کا شیڈول' : "Today's Schedule", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 12),
-                          ..._todayClasses.map((c) => Card(
-                            elevation: 0,
-                            margin: const EdgeInsets.only(bottom: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
-                            child: ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(color: theme.colorScheme.primaryContainer, borderRadius: BorderRadius.circular(10)),
-                                child: Icon(Icons.class_, color: theme.colorScheme.primary, size: 20),
+      child: AppScaffold(
+        currentIndex: 0,
+        role: 'student',
+        showBottomNav: true,
+        onNavChanged: _onNavChanged,
+        child: Scaffold(
+          appBar: CustomAppBar(
+            title: isUrdu ? 'طالب علم ڈیش بورڈ' : 'Student Dashboard',
+            actions: [
+              IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () => context.push(RouteNames.notifications)),
+            ],
+            isUrdu: isUrdu,
+          ),
+          body: _isLoading && _todayClasses.isEmpty
+              ? const Center(child: LoadingWidget())
+              : _error != null && _todayClasses.isEmpty
+                  ? AppErrorWidget(message: _error!, onRetry: _loadData)
+                  : RefreshIndicator(
+                      onRefresh: _loadData,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(isUrdu ? 'آج کا شیڈول' : "Today's Schedule", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 12),
+                            ..._todayClasses.map((c) => Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                              child: ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(color: theme.colorScheme.primaryContainer, borderRadius: BorderRadius.circular(10)),
+                                  child: Icon(Icons.class_, color: theme.colorScheme.primary, size: 20),
+                                ),
+                                title: Text(c['subject'], style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                subtitle: Text('${c['teacher']} • ${c['room']}'),
+                                trailing: Text(c['time'], style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                               ),
-                              title: Text(c['subject'], style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
-                              subtitle: Text('${c['teacher']} • ${c['room']}'),
-                              trailing: Text(c['time'], style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                            )),
+                            const SizedBox(height: 20),
+                            GridView.count(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                              childAspectRatio: 1.3,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              children: [
+                                StatsCard(icon: Icons.event_available, value: '92%', label: isUrdu ? 'حاضری' : 'Attendance', color: const Color(0xFF10B981)),
+                                StatsCard(icon: Icons.assignment_late, value: '0', label: isUrdu ? 'باقی ہوم ورک' : 'Pending HW', color: const Color(0xFFF59E0B)),
+                                StatsCard(icon: Icons.notifications, value: '0', label: isUrdu ? 'غیر پڑھے' : 'Unread', color: const Color(0xFF3B82F6)),
+                              ],
                             ),
-                          )),
-                          const SizedBox(height: 20),
-                          GridView.count(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
-                            childAspectRatio: 1.3,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            children: [
-                              StatsCard(icon: Icons.event_available, value: '92%', label: isUrdu ? 'حاضری' : 'Attendance', color: const Color(0xFF10B981)),
-                              StatsCard(icon: Icons.assignment_late, value: '0', label: isUrdu ? 'باقی ہوم ورک' : 'Pending HW', color: const Color(0xFFF59E0B)),
-                              StatsCard(icon: Icons.notifications, value: '0', label: isUrdu ? 'غیر پڑھے' : 'Unread', color: const Color(0xFF3B82F6)),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          Text(isUrdu ? 'اعلانات' : 'Announcements', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 12),
-                          ..._announcements.map((a) => Card(
-                            elevation: 0,
-                            margin: const EdgeInsets.only(bottom: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            child: ListTile(
-                              leading: Icon(Icons.campaign_outlined, color: theme.colorScheme.primary),
-                              title: Text(a['title']!, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
-                              subtitle: Text(a['content']!),
-                              trailing: const StatusBadge(label: 'New', type: StatusType.info),
-                            ),
-                          )),
-                        ],
+                            const SizedBox(height: 24),
+                            Text(isUrdu ? 'اعلانات' : 'Announcements', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 12),
+                            ..._announcements.map((a) => Card(
+                              elevation: 0,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                leading: Icon(Icons.campaign_outlined, color: theme.colorScheme.primary),
+                                title: Text(a['title']!, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                subtitle: Text(a['content']!),
+                                trailing: const StatusBadge(label: 'New', type: StatusType.info),
+                              ),
+                            )),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+        ),
       ),
     );
   }

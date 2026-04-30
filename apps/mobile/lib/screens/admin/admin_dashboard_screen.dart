@@ -40,21 +40,24 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     setState(() { _isLoading = true; _error = null; });
     try {
       final api = ref.read(apiServiceProvider);
-      final service = AdminService(api);
-      final data = await service.getUsers(role: UserRole.student);
-      // In a real implementation you'd fetch dashboard stats from a dedicated endpoint
+      final service = DashboardService(api);
+      final data = await service.getAdminDashboard();
       setState(() {
-        _stats = DashboardStatsModel(
-          totalStudents: data.length,
-          totalTeachers: 0,
-          totalParents: 0,
-          totalClasses: 0,
-          totalSections: 0,
-        );
+        _stats = data ?? DashboardStatsModel();
         _isLoading = false;
       });
     } catch (e) {
       setState(() { _error = e.toString(); _isLoading = false; });
+    }
+  }
+
+  void _onNavChanged(int index) {
+    switch (index) {
+      case 0: break;
+      case 1: context.push(RouteNames.adminTeachers); break;
+      case 2: context.push(RouteNames.adminClasses); break;
+      case 3: context.push(RouteNames.adminSettings); break;
+      case 4: context.push(RouteNames.profile); break;
     }
   }
 
@@ -64,7 +67,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final theme = Theme.of(context);
     return Directionality(
       textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
+      child: AppScaffold(
+        currentIndex: 0,
+        role: 'admin',
+        showBottomNav: true,
+        onNavChanged: _onNavChanged,
+        child: Scaffold(
         appBar: CustomAppBar(
           title: isUrdu ? 'ایڈمن ڈیش بورڈ' : 'Admin Dashboard',
           actions: [
@@ -161,6 +169,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       ),
                     ),
                   ),
+        ),
       ),
     );
   }
