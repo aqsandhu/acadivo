@@ -20,6 +20,10 @@ env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/acadivo
 
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
 jobs:
   # ── 0. Manual Approval Gate ────────────────────────────────────────────────
   # Uses GitHub Environments with required reviewers
@@ -63,7 +67,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          images: ${{ env.IMAGE_PREFIX }}-api
           tags: |
             type=raw,value=${{ steps.version.outputs.version }}
             type=raw,value=production-latest
@@ -207,17 +211,24 @@ jobs:
 
             if [ "$HEALTH_OK" != "true" ]; then
               echo "❌ Health checks failed after $MAX_RETRIES attempts!"
-              echo "🚨 Initiating ROLLBACK..."
+              echo "🚨 Initiating ROLLBACK to production-latest..."
 
-              # Rollback to previous images
+              # Safer rollback: redeploy without 'down' to preserve networks & volumes
               docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml \
                 --env-file .env.production \
-                down
+                up -d --no-deps --scale api=3 api
 
-              # Re-deploy previous version (stored as production-previous)
+              sleep 10
+
               docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml \
                 --env-file .env.production \
-                up -d
+                up -d --no-deps --scale socket=2 socket
+
+              sleep 10
+
+              docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml \
+                --env-file .env.production \
+                up -d --no-deps web nginx
 
               echo "📢 Sending rollback notification..."
               exit 1

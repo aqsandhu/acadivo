@@ -391,6 +391,14 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
+      # OWASP ZAP scan requires a running application. Commented out until 
+      # integration test environment is available in CI.
+      # - name: Run OWASP ZAP baseline scan
+      #   uses: zaproxy/action-baseline@v0.12.0
+      #   with:
+      #     target: 'http://localhost:3000'
+      #   continue-on-error: true
+
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@master
         with:
