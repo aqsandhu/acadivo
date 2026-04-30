@@ -108,7 +108,7 @@ export default function SchoolsPage() {
               <Input placeholder={t("common.search")} className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
           </div>
-          <Select value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}>
+          <Select value={cityFilter} onValueChange={(value) => setCityFilter(value)}>
             <SelectOption value="">All Cities</SelectOption>
             <SelectOption value="Lahore">Lahore</SelectOption>
             <SelectOption value="Karachi">Karachi</SelectOption>
@@ -118,13 +118,13 @@ export default function SchoolsPage() {
             <SelectOption value="Peshawar">Peshawar</SelectOption>
             <SelectOption value="Multan">Multan</SelectOption>
           </Select>
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
             <SelectOption value="">All Status</SelectOption>
             <SelectOption value="ACTIVE">Active</SelectOption>
             <SelectOption value="SUSPENDED">Suspended</SelectOption>
             <SelectOption value="PENDING">Pending</SelectOption>
           </Select>
-          <Select value={planFilter} onChange={(e) => setPlanFilter(e.target.value)}>
+          <Select value={planFilter} onValueChange={(value) => setPlanFilter(value)}>
             <SelectOption value="">All Plans</SelectOption>
             <SelectOption value="Basic">Basic</SelectOption>
             <SelectOption value="Standard">Standard</SelectOption>
@@ -202,7 +202,7 @@ export default function SchoolsPage() {
             <div className="grid gap-2"><Label>Code</Label><Input value={form.code || ""} onChange={(e) => setForm({ ...form, code: e.target.value })} /></div>
             <div className="grid gap-2"><Label>City</Label><Input value={form.city || ""} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
             <div className="grid gap-2"><Label>Type</Label>
-              <Select value={form.type || ""} onChange={(e) => setForm({ ...form, type: e.target.value as any })}>
+              <Select value={form.type || ""} onValueChange={(value) => setForm({ ...form, type: value as any })}>
                 <SelectOption value="">Select</SelectOption>
                 <SelectOption value="GOVERNMENT">Government</SelectOption>
                 <SelectOption value="PRIVATE">Private</SelectOption>
@@ -210,7 +210,7 @@ export default function SchoolsPage() {
               </Select>
             </div>
             <div className="grid gap-2"><Label>Plan</Label>
-              <Select value={form.plan || ""} onChange={(e) => setForm({ ...form, plan: e.target.value })}>
+              <Select value={form.plan || ""} onValueChange={(value) => setForm({ ...form, plan: value })}>
                 <SelectOption value="">Select</SelectOption>
                 <SelectOption value="Basic">Basic</SelectOption>
                 <SelectOption value="Standard">Standard</SelectOption>

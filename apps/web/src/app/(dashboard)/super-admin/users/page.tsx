@@ -37,7 +37,7 @@ export default function UsersPage() {
               <Input placeholder={t("common.search")} className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
           </div>
-          <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+          <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value)}>
             <SelectOption value="">All Roles</SelectOption>
             <SelectOption value="ADMIN">Admin</SelectOption>
             <SelectOption value="TEACHER">Teacher</SelectOption>
@@ -45,7 +45,7 @@ export default function UsersPage() {
             <SelectOption value="PARENT">Parent</SelectOption>
             <SelectOption value="PRINCIPAL">Principal</SelectOption>
           </Select>
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
             <SelectOption value="">All Status</SelectOption>
             <SelectOption value="ACTIVE">Active</SelectOption>
             <SelectOption value="INACTIVE">Inactive</SelectOption>

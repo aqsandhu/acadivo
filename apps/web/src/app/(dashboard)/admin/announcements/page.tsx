@@ -57,7 +57,7 @@ export default function AdminAnnouncementsPage() {
           <div className="grid gap-2"><Label>Content</Label><Input value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2"><Label>Target</Label>
-              <Select value={form.targetAudience[0]} onChange={(e) => setForm({ ...form, targetAudience: [e.target.value] })}>
+              <Select value={form.targetAudience[0]} onValueChange={(value) => setForm({ ...form, targetAudience: [value] })}>
                 <SelectOption value="ALL">All</SelectOption>
                 <SelectOption value="TEACHERS">Teachers</SelectOption>
                 <SelectOption value="STUDENTS">Students</SelectOption>
@@ -65,7 +65,7 @@ export default function AdminAnnouncementsPage() {
               </Select>
             </div>
             <div className="grid gap-2"><Label>Priority</Label>
-              <Select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as any })}>
+              <Select value={form.priority} onValueChange={(value) => setForm({ ...form, priority: value as any })}>
                 <SelectOption value="LOW">Low</SelectOption>
                 <SelectOption value="MEDIUM">Medium</SelectOption>
                 <SelectOption value="HIGH">High</SelectOption>

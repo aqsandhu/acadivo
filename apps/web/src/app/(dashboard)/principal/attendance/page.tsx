@@ -11,7 +11,7 @@ import { Select, SelectOption } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getAttendance, getStudents } from "@/services/mockApi";
+import { useMockApi, getAttendance, getStudents } from "@/services/apiClient";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line } from "recharts";
 
 export default function PrincipalAttendancePage() {
@@ -87,7 +87,7 @@ export default function PrincipalAttendancePage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Class-wise Summary</CardTitle>
-          <Select value={classFilter} onChange={(e) => setClassFilter(e.target.value)}>
+          <Select value={classFilter} onValueChange={(value) => setClassFilter(value)}>
             <SelectOption value="">All Classes</SelectOption>
             {Array.from({ length: 10 }).map((_, i) => <SelectOption key={i} value={`Class ${i + 1}`}>Class {i + 1}</SelectOption>)}
           </Select>

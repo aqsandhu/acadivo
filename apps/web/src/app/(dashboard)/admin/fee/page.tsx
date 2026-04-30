@@ -111,7 +111,7 @@ export default function AdminFeePage() {
             <div className="grid gap-2"><Label>Type</Label><Input value={form.type || ""} onChange={(e) => setForm({ ...form, type: e.target.value })} /></div>
             <div className="grid gap-2"><Label>Amount (PKR)</Label><Input type="number" value={form.amount || ""} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} /></div>
             <div className="grid gap-2"><Label>Frequency</Label>
-              <Select value={form.frequency || ""} onChange={(e) => setForm({ ...form, frequency: e.target.value as any })}>
+              <Select value={form.frequency || ""} onValueChange={(value) => setForm({ ...form, frequency: value as any })}>
                 <SelectOption value="">Select</SelectOption>
                 <SelectOption value="MONTHLY">Monthly</SelectOption>
                 <SelectOption value="QUARTERLY">Quarterly</SelectOption>

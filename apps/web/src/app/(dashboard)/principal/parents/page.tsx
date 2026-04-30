@@ -29,7 +29,7 @@ export default function PrincipalParentsPage() {
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input placeholder={t("common.search")} className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
             <SelectOption value="">All Status</SelectOption>
             <SelectOption value="ACTIVE">Active</SelectOption>
             <SelectOption value="INACTIVE">Inactive</SelectOption>

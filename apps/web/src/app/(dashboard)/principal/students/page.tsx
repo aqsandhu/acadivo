@@ -35,11 +35,11 @@ export default function PrincipalStudentsPage() {
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input placeholder={t("common.search")} className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <Select value={classFilter} onChange={(e) => setClassFilter(e.target.value)}>
+          <Select value={classFilter} onValueChange={(value) => setClassFilter(value)}>
             <SelectOption value="">All Classes</SelectOption>
             {Array.from({ length: 10 }).map((_, i) => <SelectOption key={i} value={`Class ${i + 1}`}>Class {i + 1}</SelectOption>)}
           </Select>
-          <Select value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
+          <Select value={sectionFilter} onValueChange={(value) => setSectionFilter(value)}>
             <SelectOption value="">All Sections</SelectOption>
             <SelectOption value="A">A</SelectOption>
             <SelectOption value="B">B</SelectOption>

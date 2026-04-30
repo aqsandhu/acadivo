@@ -59,7 +59,7 @@ export default function AdminSettingsPage() {
             <CardHeader><CardTitle>Academic Settings</CardTitle></CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2"><Label>Grading Scheme</Label>
-                <Select value={academic.grading} onChange={(e) => setAcademic({ ...academic, grading: e.target.value })}>
+                <Select value={academic.grading} onValueChange={(value) => setAcademic({ ...academic, grading: value })}>
                   <SelectOption value="Percentage">Percentage</SelectOption>
                   <SelectOption value="GPA">GPA</SelectOption>
                   <SelectOption value="Letter">Letter Grades</SelectOption>
@@ -77,7 +77,7 @@ export default function AdminSettingsPage() {
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2"><Label>Default Late Fee (PKR)</Label><Input value={fee.lateFee} onChange={(e) => setFee({ ...fee, lateFee: e.target.value })} /></div>
               <div className="grid gap-2"><Label>Currency</Label>
-                <Select value={fee.currency} onChange={(e) => setFee({ ...fee, currency: e.target.value })}>
+                <Select value={fee.currency} onValueChange={(value) => setFee({ ...fee, currency: value })}>
                   <SelectOption value="PKR">PKR (Pakistani Rupee)</SelectOption>
                 </Select>
               </div>

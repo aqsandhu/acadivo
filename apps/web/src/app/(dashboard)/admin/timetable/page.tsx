@@ -46,7 +46,7 @@ export default function AdminTimetablePage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold tracking-tight">{t("nav.timetable")}</h2>
         <div className="flex gap-2">
-          <Select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
+          <Select value={selectedClass} onValueChange={(value) => setSelectedClass(value)}>
             {Array.from({ length: 10 }).map((_, i) => <SelectOption key={i} value={`Class ${i + 1}`}>Class {i + 1}</SelectOption>)}
           </Select>
           <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" />Save</Button>

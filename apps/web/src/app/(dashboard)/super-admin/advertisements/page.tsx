@@ -131,7 +131,7 @@ export default function AdvertisementsPage() {
             <div className="grid gap-2"><Label>Target Cities</Label><Input value={form.targetCities?.join(", ") || ""} onChange={(e) => setForm({ ...form, targetCities: e.target.value.split(",").map((s) => s.trim()) })} /></div>
             <div className="grid gap-2"><Label>School Types</Label><Input value={form.targetSchoolTypes?.join(", ") || ""} onChange={(e) => setForm({ ...form, targetSchoolTypes: e.target.value.split(",").map((s) => s.trim()) })} /></div>
             <div className="grid gap-2"><Label>Priority</Label>
-              <Select value={String(form.priority || 1)} onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}>
+              <Select value={String(form.priority || 1)} onValueChange={(value) => setForm({ ...form, priority: Number(value) })}>
                 <SelectOption value="1">1 - Low</SelectOption><SelectOption value="2">2</SelectOption><SelectOption value="3">3</SelectOption><SelectOption value="4">4</SelectOption><SelectOption value="5">5 - High</SelectOption>
               </Select>
             </div>

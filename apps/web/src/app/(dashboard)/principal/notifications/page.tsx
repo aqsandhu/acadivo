@@ -42,7 +42,7 @@ export default function PrincipalNotificationsPage() {
           <div className="grid gap-2"><Label>Title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Notification title" /></div>
           <div className="grid gap-2"><Label>Body</Label><Input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Notification body" /></div>
           <div className="grid gap-2"><Label>Target Audience</Label>
-            <Select value={target} onChange={(e) => setTarget(e.target.value)}>
+            <Select value={target} onValueChange={(value) => setTarget(value)}>
               <SelectOption value="ALL">All</SelectOption>
               <SelectOption value="TEACHERS">All Teachers</SelectOption>
               <SelectOption value="STUDENTS">All Students</SelectOption>
