@@ -62,7 +62,7 @@ class _SetupParentPasswordScreenState extends ConsumerState<SetupParentPasswordS
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Enter your student ID, OTP received on phone, and set a new password.',
+              'You and your child share the same student ID. Set your parent password below to access your parent account.',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 24),

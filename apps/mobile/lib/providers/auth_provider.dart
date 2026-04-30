@@ -20,6 +20,8 @@ class AuthState {
     this.isAuthenticated = false,
     this.isLoading = false,
     this.error,
+  });
+
   /// Redirect route based on user role
   String? get redirectRoute {
     switch (user?.role) {

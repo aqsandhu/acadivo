@@ -40,10 +40,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RouteNames.forgotPassword,
-        builder: (context, state) => Scaffold(
-          appBar: AppBar(title: const Text('Forgot Password')),
-          body: const Center(child: Text('Forgot Password Screen')),
-        ),
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.resetPassword,
+        builder: (context, state) {
+          final token = state.uri.queryParameters['token'];
+          return ResetPasswordScreen(token: token);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.setupParentPassword,
+        builder: (context, state) => const SetupParentPasswordScreen(),
       ),
 
       // Admin Routes
@@ -294,6 +302,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final userId = state.pathParameters['userId'] ?? '';
           return ChatScreen(userId: userId);
         },
+      ),
+
+      // Super Admin Routes
+      GoRoute(
+        path: RouteNames.superAdminDashboard,
+        builder: (context, state) => const SuperAdminDashboardScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.superAdminSchools,
+        builder: (context, state) => const ManageSchoolsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.superAdminUsers,
+        builder: (context, state) => const PlatformUsersScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.superAdminSubscriptions,
+        builder: (context, state) => const SubscriptionsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.superAdminAdvertisements,
+        builder: (context, state) => const ManageAdsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.superAdminAnalytics,
+        builder: (context, state) => const PlatformAnalyticsScreen(),
       ),
     ],
   );

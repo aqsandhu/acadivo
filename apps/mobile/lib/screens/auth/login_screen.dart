@@ -128,6 +128,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               return null;
                             },
                           ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Student and Parent use the same ID with different passwords',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
                           const SizedBox(height: 16),
                           TextFormField(
                             controller: _passwordController,

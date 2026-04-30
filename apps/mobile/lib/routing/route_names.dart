@@ -71,4 +71,12 @@ class RouteNames {
   static const String profile = '/profile';
   static const String settings = '/settings';
   static const String chat = '/messages/:userId';
+
+  // Super Admin
+  static const String superAdminDashboard = '/super-admin/dashboard';
+  static const String superAdminSchools = '/super-admin/schools';
+  static const String superAdminUsers = '/super-admin/users';
+  static const String superAdminSubscriptions = '/super-admin/subscriptions';
+  static const String superAdminAdvertisements = '/super-admin/advertisements';
+  static const String superAdminAnalytics = '/super-admin/analytics';
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/message_provider.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -49,14 +50,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (_messageController.text.trim().isEmpty) return;
     setState(() => _sending = true);
     try {
-      final api = ref.read(apiServiceProvider);
-      final service = CommunicationService(api);
-      await service.sendMessage(
+      final message = await ref.read(messagesProvider.notifier).sendMessage(
         receiverId: widget.userId,
         content: _messageController.text.trim(),
       );
-      _messageController.clear();
-      _loadData();
+      if (message != null) {
+        _messageController.clear();
+        _loadData();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to send message'), backgroundColor: Colors.red),
+          );
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

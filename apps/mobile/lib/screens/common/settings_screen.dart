@@ -14,6 +14,8 @@ import '../../routing/route_names.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../storage/preferences.dart';
+import '../../constants/storage_keys.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -22,6 +24,18 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  late final Preferences _prefs;
+  bool _notificationSounds = true;
+  bool _pushNotifications = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefs = Preferences.instance;
+    _notificationSounds = _prefs.getNotificationSounds();
+    _pushNotifications = _prefs.getPushNotifications();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isUrdu = ref.watch(isRtlProvider);
@@ -79,7 +93,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            Text(isUrdu ? 'براؤزر' : 'Notifications', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            Text(isUrdu ? 'اطلاعات' : 'Notifications', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Card(
               elevation: 0,
@@ -90,16 +104,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     secondary: const Icon(Icons.notifications_outlined),
                     title: Text(isUrdu ? 'پش نوٹیفیکیشن' : 'Push Notifications'),
                     subtitle: Text(isUrdu ? 'پش نوٹیفیکیشن وصول کریں' : 'Receive push notifications'),
-                    value: true,
-                    onChanged: (v) {},
+                    value: _pushNotifications,
+                    onChanged: (v) async {
+                      await _prefs.setPushNotifications(v);
+                      setState(() => _pushNotifications = v);
+                    },
                   ),
                   const Divider(height: 1),
                   SwitchListTile(
-                    secondary: const Icon(Icons.email_outlined),
-                    title: Text(isUrdu ? 'ای میل نوٹیفیکیشن' : 'Email Notifications'),
-                    subtitle: Text(isUrdu ? 'ای میل نوٹیفیکیشن وصول کریں' : 'Receive email notifications'),
-                    value: false,
-                    onChanged: (v) {},
+                    secondary: const Icon(Icons.volume_up_outlined),
+                    title: Text(isUrdu ? 'نوٹیفکیشن آواز' : 'Notification Sounds'),
+                    subtitle: Text(isUrdu ? 'نوٹیفکیشن آواز فعال کریں' : 'Play sound on new notifications'),
+                    value: _notificationSounds,
+                    onChanged: (v) async {
+                      await _prefs.setNotificationSounds(v);
+                      setState(() => _notificationSounds = v);
+                    },
                   ),
                 ],
               ),
