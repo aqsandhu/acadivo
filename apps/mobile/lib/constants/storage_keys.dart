@@ -14,6 +14,9 @@ class StorageKeys {
   static const String onboardingComplete = 'onboarding_complete';
   static const String deviceId = 'device_id';
 
+  static const String notificationSounds = 'notification_sounds';
+  static const String pushNotifications = 'push_notifications';
+
   // Hive box names
   static const String userBox = 'user_box';
   static const String notificationsBox = 'notifications_box';

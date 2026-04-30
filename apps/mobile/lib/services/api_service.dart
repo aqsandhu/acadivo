@@ -6,7 +6,6 @@ import 'package:logger/logger.dart';
 import '../constants/api_constants.dart';
 import '../constants/app_constants.dart';
 import '../storage/preferences.dart';
-import 'auth_service.dart';
 
 class ApiService {
   late final Dio _dio;
@@ -123,9 +122,28 @@ class ApiService {
       final refreshToken = await _preferences.getRefreshToken();
       if (refreshToken == null || refreshToken.isEmpty) return false;
 
-      final authService = AuthService(this);
-      final result = await authService.refreshToken(refreshToken);
-      return result != null;
+      final response = await _dio.post(
+        ApiConstants.refreshToken,
+        data: {'refreshToken': refreshToken},
+        options: Options(
+          headers: {'Authorization': 'Bearer $refreshToken'},
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        final newToken = data['token']?.toString();
+        final newRefreshToken = data['refreshToken']?.toString();
+
+        if (newToken != null) {
+          await _preferences.setToken(newToken);
+          if (newRefreshToken != null) {
+            await _preferences.setRefreshToken(newRefreshToken);
+          }
+          return true;
+        }
+      }
+      return false;
     } catch (e) {
       _logger.e('Token refresh failed: $e');
       return false;

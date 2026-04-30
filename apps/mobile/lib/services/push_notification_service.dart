@@ -5,6 +5,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../storage/preferences.dart';
+
 /// Background message handler for Firebase
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -91,8 +93,28 @@ class PushNotificationService {
     await _messaging.unsubscribeFromTopic(topic);
   }
 
+  /// Check if push notifications are enabled in preferences
+  bool _isPushEnabled() {
+    try {
+      return Preferences.instance.getPushNotifications();
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// Check if notification sounds are enabled in preferences
+  bool _isSoundEnabled() {
+    try {
+      return Preferences.instance.getNotificationSounds();
+    } catch (_) {
+      return true;
+    }
+  }
+
   /// Handle foreground messages
   void _handleForegroundMessage(RemoteMessage message) {
+    if (!_isPushEnabled()) return;
+
     final notification = message.notification;
     final android = message.notification?.android;
 
@@ -109,11 +131,12 @@ class PushNotificationService {
             importance: Importance.high,
             priority: Priority.high,
             icon: android?.smallIcon ?? '@mipmap/ic_launcher',
+            playSound: _isSoundEnabled(),
           ),
-          iOS: const DarwinNotificationDetails(
+          iOS: DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
-            presentSound: true,
+            presentSound: _isSoundEnabled(),
           ),
         ),
         payload: message.data['route'] ?? '',
@@ -134,5 +157,37 @@ class PushNotificationService {
   void _handleMessageOpenedApp(RemoteMessage message) {
     debugPrint('Message opened app: ${message.messageId}');
     // Handle navigation based on message data
+  }
+
+  /// Show a local notification manually
+  Future<void> showNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (!_isPushEnabled()) return;
+    await _localNotifications.show(
+      id,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'high_importance_channel',
+          'High Importance Notifications',
+          channelDescription: 'This channel is used for important notifications.',
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+          playSound: _isSoundEnabled(),
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: _isSoundEnabled(),
+        ),
+      ),
+      payload: payload ?? '',
+    );
   }
 }

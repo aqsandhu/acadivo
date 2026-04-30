@@ -117,7 +117,7 @@ class SocketService {
       _notificationsNotifier.addNotification(notification);
       
       // Show local notification
-      _pushNotificationService.showLocalNotification(
+      _pushNotificationService.showNotification(
         id: notification.id.hashCode,
         title: notification.title,
         body: notification.body,

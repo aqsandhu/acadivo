@@ -112,6 +112,24 @@ class Preferences {
     return _prefs.getString(StorageKeys.deviceId);
   }
 
+  // Notification Sounds
+  Future<void> setNotificationSounds(bool value) async {
+    await _prefs.setBool(StorageKeys.notificationSounds, value);
+  }
+
+  bool getNotificationSounds() {
+    return _prefs.getBool(StorageKeys.notificationSounds) ?? true;
+  }
+
+  // Push Notifications
+  Future<void> setPushNotifications(bool value) async {
+    await _prefs.setBool(StorageKeys.pushNotifications, value);
+  }
+
+  bool getPushNotifications() {
+    return _prefs.getBool(StorageKeys.pushNotifications) ?? true;
+  }
+
   // Clear Auth Data
   Future<void> clearAuth() async {
     await _prefs.remove(StorageKeys.authToken);

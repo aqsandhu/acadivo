@@ -63,3 +63,13 @@ export 'common/settings_screen.dart';
 export 'common/chat_screen.dart';
 
 export 'auth/login_screen.dart';
+export 'auth/forgot_password_screen.dart';
+export 'auth/reset_password_screen.dart';
+export 'auth/setup_parent_password_screen.dart';
+
+export 'super_admin/super_admin_dashboard_screen.dart';
+export 'super_admin/manage_schools_screen.dart';
+export 'super_admin/manage_ads_screen.dart';
+export 'super_admin/platform_users_screen.dart';
+export 'super_admin/subscriptions_screen.dart';
+export 'super_admin/platform_analytics_screen.dart';
