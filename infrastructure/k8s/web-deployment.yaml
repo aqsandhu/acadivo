@@ -1,0 +1,65 @@
+# =============================================================================
+# Acadivo — Web Deployment (Next.js static + SSR)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acadivo-web
+  namespace: acadivo
+  labels:
+    app: acadivo
+    component: web
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: acadivo
+      component: web
+  template:
+    metadata:
+      labels:
+        app: acadivo
+        component: web
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/acadivo/acadivo-web:latest
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: acadivo-config
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: "https://api.acadivo.com"
+            - name: NEXT_PUBLIC_SOCKET_URL
+              value: "wss://api.acadivo.com"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi

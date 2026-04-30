@@ -2,7 +2,7 @@
   "name": "@acadivo/api",
   "version": "0.1.0",
   "private": true,
-  "description": "Acadivo REST API — Node.js + Express + Prisma",
+  "description": "Acadivo REST API \u2014 Node.js + Express + Prisma",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -19,7 +19,8 @@
     "db:migrate:prod": "prisma migrate deploy",
     "db:seed": "ts-node prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:format": "prisma format"
+    "db:format": "prisma format",
+    "test:ci": "jest --ci --coverage"
   },
   "dependencies": {
     "express": "^4.19.0",

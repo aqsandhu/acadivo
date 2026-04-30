@@ -159,7 +159,7 @@ jobs:
         run: npm ci
 
       - name: Run web component tests
-        run: cd apps/web && npm run test:unit -- --coverage
+        run: cd apps/web && npm run test:coverage
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium

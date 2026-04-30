@@ -1,0 +1,21 @@
+# =============================================================================
+# Acadivo — Web Service (ClusterIP for internal access)
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: acadivo-web
+  namespace: acadivo
+  labels:
+    app: acadivo
+    component: web
+spec:
+  type: ClusterIP
+  selector:
+    app: acadivo
+    component: web
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP

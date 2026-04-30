@@ -1,0 +1,21 @@
+# =============================================================================
+# Acadivo — API Service (ClusterIP for internal access)
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: acadivo-api
+  namespace: acadivo
+  labels:
+    app: acadivo
+    component: api
+spec:
+  type: ClusterIP
+  selector:
+    app: acadivo
+    component: api
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+      protocol: TCP

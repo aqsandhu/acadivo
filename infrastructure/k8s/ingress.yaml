@@ -1,0 +1,61 @@
+# =============================================================================
+# Acadivo — Kubernetes Ingress (NGINX)
+# =============================================================================
+# Requires NGINX Ingress Controller installed in the cluster.
+# SSL termination via cert-manager (Let’s Encrypt or custom certs).
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: acadivo-ingress
+  namespace: acadivo
+  labels:
+    app: acadivo
+    component: ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/websocket-services: "acadivo-socket"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - app.acadivo.com
+        - api.acadivo.com
+        - ws.acadivo.com
+      secretName: acadivo-tls-secret
+  rules:
+    - host: app.acadivo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: acadivo-web
+                port:
+                  number: 3000
+    - host: api.acadivo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: acadivo-api
+                port:
+                  number: 5000
+    - host: ws.acadivo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: acadivo-socket
+                port:
+                  number: 5001

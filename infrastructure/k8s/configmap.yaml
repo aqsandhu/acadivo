@@ -1,0 +1,15 @@
+# =============================================================================
+# Acadivo — Kubernetes ConfigMap (non-sensitive configuration)
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: acadivo-config
+  namespace: acadivo
+data:
+  NODE_ENV: "production"
+  PORT: "5000"
+  WEB_URL: "https://app.acadivo.com"
+  API_URL: "https://api.acadivo.com"
+  SOCKET_URL: "wss://api.acadivo.com"
+  SMTP_PORT: "587"
