@@ -333,6 +333,7 @@ model User {
   @@unique([email, tenantId])
   @@index([tenantId])
   @@index([role])
+  @@index([tenantId, role])
   @@index([uniqueId])
   @@index([isActive])
   @@index([createdAt])
@@ -440,6 +441,7 @@ model Student {
   @@unique([rollNumber, tenantId])
   @@index([tenantId])
   @@index([classId])
+  @@index([tenantId, classId])
   @@index([sectionId])
   @@index([status])
 }
@@ -1016,6 +1018,7 @@ model FeeRecord {
 
   @@index([tenantId])
   @@index([studentId])
+  @@index([studentId, status])
   @@index([feeStructureId])
   @@index([status])
   @@index([dueDate])

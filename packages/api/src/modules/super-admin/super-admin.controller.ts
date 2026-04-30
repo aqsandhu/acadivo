@@ -124,3 +124,27 @@ export const toggleAd = asyncHandler(async (req: Request, res: Response) => {
   const result = await service.toggleAdStatus(req.params.id);
   res.status(200).json(successResponse(result, result.message));
 });
+
+// ── Bulk User Creation ──
+
+export const bulkCreateUsers = asyncHandler(async (req: Request, res: Response) => {
+  const result = await service.bulkCreateUsers(req.body.users);
+  res.status(201).json(successResponse(result, `${result.success} users created, ${result.failed} failed`));
+});
+
+// ── System-wide Settings ──
+
+export const getSystemSettings = asyncHandler(async (_req: Request, res: Response) => {
+  const result = await service.getSystemSettings();
+  res.status(200).json(successResponse(result, "System settings retrieved"));
+});
+
+export const updateSystemSetting = asyncHandler(async (req: Request, res: Response) => {
+  const result = await service.updateSystemSetting(req.body.key, req.body.value, req.body.category);
+  res.status(200).json(successResponse(result, "System setting updated"));
+});
+
+export const deleteSystemSetting = asyncHandler(async (req: Request, res: Response) => {
+  await service.deleteSystemSetting(req.params.key);
+  res.status(200).json(successResponse(null, "System setting deleted"));
+});

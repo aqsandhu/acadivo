@@ -51,4 +51,12 @@ router.delete("/advertisements/:id", controller.deleteAd);
 router.get("/advertisements/:id/stats", controller.getAdStats);
 router.post("/ads/:id/toggle", controller.toggleAd);
 
+// Bulk Users
+router.post("/users/bulk", controller.bulkCreateUsers);
+
+// System-wide Settings
+router.get("/settings", controller.getSystemSettings);
+router.put("/settings", validateBody(validator.updateSystemSettingValidator), controller.updateSystemSetting);
+router.delete("/settings/:key", controller.deleteSystemSetting);
+
 export default router;

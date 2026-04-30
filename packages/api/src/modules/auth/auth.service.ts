@@ -401,7 +401,7 @@ export async function forgotPassword(identifier: string) {
 // ────────────────────────────────────────────────
 
 export async function resetPassword(dto: ResetPasswordDTO) {
-  const decoded = verifyToken(dto.token, "access"); // reset uses access secret but different validation
+  const decoded = verifyToken(dto.token, "reset");
   if (decoded.type !== "reset") {
     throw ApiError.badRequest("Invalid reset token", "INVALID_RESET_TOKEN");
   }

@@ -259,6 +259,34 @@ export async function getChildHomework(parentId: string, tenantId: string, stude
 }
 
 // ═══════════════════════════════════════════════
+// Child Fee Records
+// ═══════════════════════════════════════════════
+
+export async function getChildFeeRecords(parentId: string, tenantId: string, studentId: string) {
+  const link = await prisma.studentParent.findFirst({ where: { parentId, studentId } });
+  if (!link) throw ApiError.forbidden("Not your child");
+
+  return prisma.feeRecord.findMany({
+    where: { studentId, tenantId },
+    include: { feeStructure: true },
+    orderBy: { dueDate: "desc" },
+  });
+}
+
+export async function getChildFeeRecordDetail(parentId: string, tenantId: string, studentId: string, feeRecordId: string) {
+  const link = await prisma.studentParent.findFirst({ where: { parentId, studentId } });
+  if (!link) throw ApiError.forbidden("Not your child");
+
+  const feeRecord = await prisma.feeRecord.findFirst({
+    where: { id: feeRecordId, studentId, tenantId },
+    include: { feeStructure: true },
+  });
+
+  if (!feeRecord) throw ApiError.notFound("Fee record not found");
+  return feeRecord;
+}
+
+// ═══════════════════════════════════════════════
 // Results & Marks
 // ═══════════════════════════════════════════════
 

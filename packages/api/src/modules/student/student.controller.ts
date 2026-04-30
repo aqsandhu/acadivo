@@ -115,6 +115,29 @@ export const getTimetable = asyncHandler(async (req: AuthRequest, res: Response)
   return ApiResponse.success(res, result, "My timetable");
 });
 
+// ── Fee Records ─────────────────────────────
+
+export const getFeeRecords = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const result = await StudentService.getStudentFeeRecords(req.user!.id, req.user!.tenantId);
+  return ApiResponse.success(res, result, "Fee records");
+});
+
+export const getFeeRecordDetail = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const result = await StudentService.getStudentFeeRecordDetail(req.user!.id, req.user!.tenantId, req.params.id);
+  return ApiResponse.success(res, result, "Fee record detail");
+});
+
+// ── Attendance History (detailed) ────────────
+
+export const getAttendanceHistory = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 30;
+  const from = req.query.from as string | undefined;
+  const to = req.query.to as string | undefined;
+  const result = await StudentService.getStudentAttendanceHistory(req.user!.id, req.user!.tenantId, { page, limit, from, to });
+  return ApiResponse.paginated(res, result.records, page, limit, result.total, "Attendance history");
+});
+
 // ── Notifications ────────────────────────────
 
 export const getNotifications = asyncHandler(async (req: AuthRequest, res: Response) => {

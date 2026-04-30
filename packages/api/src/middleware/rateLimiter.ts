@@ -33,6 +33,34 @@ export const authLimiter = rateLimit({
 });
 
 /**
+ * Login rate limiter: 5 requests per 15 minutes per IP.
+ * Applied specifically to the login endpoint to prevent brute-force attacks.
+ */
+export const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, _res, _next, options) => {
+    throw ApiError.unauthorized(`Too many login attempts. Max ${options.max} per 15 minutes.`, "LOGIN_RATE_LIMITED");
+  },
+});
+
+/**
+ * Password reset rate limiter: 3 requests per hour per IP.
+ * Applied to forgot-password and reset-password endpoints.
+ */
+export const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, _res, _next, options) => {
+    throw ApiError.unauthorized(`Too many password reset attempts. Max ${options.max} per hour.`, "PASSWORD_RESET_RATE_LIMITED");
+  },
+});
+
+/**
  * Limiter for upload endpoints: 20 requests per 15 minutes per IP.
  */
 export const uploadLimiter = rateLimit({

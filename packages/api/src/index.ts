@@ -22,13 +22,19 @@ import communicationRoutes from "./modules/communication/communication.routes";
 import advertisementRoutes from "./modules/advertisement/advertisement.routes";
 import uploadRoutes from "./modules/upload/upload.routes";
 import qaRoutes from "./modules/qa/qa.routes";
+import examRoutes from "./modules/exam/exam.routes";
+import healthRoutes from "./modules/health/health.routes";
+import exportRoutes from "./modules/export/export.routes";
+import importRoutes from "./modules/import/import.routes";
 import { getPreferences, updatePreferences } from "./modules/user/user.preferences.controller";
 
 // Middleware
 import { globalErrorHandler } from "./middleware/errorHandler";
 import { generalLimiter, authLimiter, uploadLimiter, writeLimiter } from "./middleware/rateLimiter";
-import { authMiddleware } from "./middleware/auth";
+import { authMiddleware, authorize } from "./middleware/auth";
 import { tenantGuard } from "./middleware/tenantGuard";
+import { sanitizeBody } from "./middleware/sanitize";
+import { enforceHTTPS } from "./middleware/httpsEnforcement";
 import { verifyToken } from "./utils/jwt";
 
 // Services
@@ -104,8 +110,24 @@ app.use(cors({
 
 app.use(morgan("combined"));
 app.use(compression());
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// ── HTTPS Enforcement (production only) ──
+app.use(enforceHTTPS);
+
+// ── Request Size Limits ──
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: true, limit: "100kb" }));
+
+// ── XSS Sanitization ──
+app.use(sanitizeBody);
+
+// ── Security Headers ──
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  next();
+});
 
 // ── Rate Limiters ──
 // Apply general rate limiter to all routes
@@ -136,6 +158,10 @@ app.use(`${API_V1}/communication`, authMiddleware, tenantGuard(), communicationR
 app.use(`${API_V1}/advertisement`, authMiddleware, tenantGuard(), advertisementRoutes);
 app.use(`${API_V1}/upload`, authMiddleware, tenantGuard(), uploadLimiter, uploadRoutes);
 app.use(`${API_V1}/qa`, authMiddleware, tenantGuard(), qaRoutes);
+app.use(`${API_V1}/exams`, authMiddleware, tenantGuard(), examRoutes);
+app.use(`${API_V1}/health`, healthRoutes);
+app.use(`${API_V1}/export`, authMiddleware, tenantGuard(), authorize("ADMIN", "PRINCIPAL", "SUPER_ADMIN"), exportRoutes);
+app.use(`${API_V1}/import`, authMiddleware, tenantGuard(), authorize("ADMIN", "PRINCIPAL", "SUPER_ADMIN"), importRoutes);
 
 // ── User Preferences ──
 app.get(`${API_V1}/user/preferences`, authMiddleware, tenantGuard(), getPreferences);

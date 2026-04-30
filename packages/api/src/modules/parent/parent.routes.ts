@@ -7,6 +7,7 @@ import { authenticate, requireParent } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import * as Controller from "./parent.controller";
 import * as V from "./parent.validator";
+import { validateChildOwnership } from "./parent.middleware";
 
 const router = Router();
 
@@ -15,18 +16,24 @@ router.use(authenticate, requireParent);
 // ── Dashboard & Children ─────────────────────
 router.get("/dashboard", Controller.getDashboard);
 router.get("/children", Controller.getChildren);
-router.get("/children/:studentId", Controller.getChildDetail);
+
+// Ownership-protected child routes
+router.get("/children/:studentId", validateChildOwnership, Controller.getChildDetail);
 
 // ── Attendance ────────────────────────────────
-router.get("/children/:studentId/attendance", Controller.getChildAttendance);
-router.get("/children/:studentId/attendance/summary", Controller.getChildAttendanceSummary);
+router.get("/children/:studentId/attendance", validateChildOwnership, Controller.getChildAttendance);
+router.get("/children/:studentId/attendance/summary", validateChildOwnership, Controller.getChildAttendanceSummary);
 
 // ── Homework ─────────────────────────────────
-router.get("/children/:studentId/homework", Controller.getChildHomework);
+router.get("/children/:studentId/homework", validateChildOwnership, Controller.getChildHomework);
 
 // ── Results & Marks ──────────────────────────
-router.get("/children/:studentId/results", Controller.getChildResults);
-router.get("/children/:studentId/marks", Controller.getChildMarks);
+router.get("/children/:studentId/results", validateChildOwnership, Controller.getChildResults);
+router.get("/children/:studentId/marks", validateChildOwnership, Controller.getChildMarks);
+
+// ── Child Fee Records ─────────────────────────
+router.get("/children/:studentId/fee-records", validateChildOwnership, Controller.getChildFeeRecords);
+router.get("/children/:studentId/fee-records/:feeRecordId", validateChildOwnership, Controller.getChildFeeRecordDetail);
 
 // ── Report Requests ──────────────────────────
 router.post("/report-request", validate(V.reportRequestValidator), Controller.createReportRequest);

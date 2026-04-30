@@ -441,6 +441,74 @@ export async function getStudentMarks(userId: string, tenantId: string) {
 }
 
 // ═══════════════════════════════════════════════
+// Fee Records
+// ═══════════════════════════════════════════════
+
+export async function getStudentFeeRecords(userId: string, tenantId: string) {
+  const student = await prisma.student.findUnique({ where: { userId } });
+  if (!student || student.tenantId !== tenantId) throw ApiError.notFound("Student not found");
+
+  return prisma.feeRecord.findMany({
+    where: { studentId: userId, tenantId },
+    include: { feeStructure: true },
+    orderBy: { dueDate: "desc" },
+  });
+}
+
+export async function getStudentFeeRecordDetail(userId: string, tenantId: string, feeRecordId: string) {
+  const feeRecord = await prisma.feeRecord.findFirst({
+    where: { id: feeRecordId, studentId: userId, tenantId },
+    include: { feeStructure: true },
+  });
+
+  if (!feeRecord) throw ApiError.notFound("Fee record not found");
+  return feeRecord;
+}
+
+// ═══════════════════════════════════════════════
+// Attendance History (Paginated + Date Range)
+// ═══════════════════════════════════════════════
+
+export async function getStudentAttendanceHistory(
+  userId: string,
+  tenantId: string,
+  options: { page: number; limit: number; from?: string; to?: string }
+) {
+  let startDate: Date | undefined;
+  let endDate: Date | undefined;
+
+  if (options.from) {
+    startDate = new Date(options.from);
+    startDate.setHours(0, 0, 0, 0);
+  }
+  if (options.to) {
+    endDate = new Date(options.to);
+    endDate.setHours(23, 59, 59, 999);
+  }
+
+  const where: Prisma.AttendanceWhereInput = { studentId: userId, tenantId };
+  if (startDate || endDate) {
+    where.date = {};
+    if (startDate) (where.date as any).gte = startDate;
+    if (endDate) (where.date as any).lte = endDate;
+  }
+
+  const skip = (options.page - 1) * options.limit;
+  const [records, total] = await Promise.all([
+    prisma.attendance.findMany({
+      where,
+      include: { class: true, section: true },
+      orderBy: { date: "desc" },
+      skip,
+      take: options.limit,
+    }),
+    prisma.attendance.count({ where }),
+  ]);
+
+  return { records, total };
+}
+
+// ═══════════════════════════════════════════════
 // Timetable
 // ═══════════════════════════════════════════════
 

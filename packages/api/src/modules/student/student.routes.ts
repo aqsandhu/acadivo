@@ -20,6 +20,7 @@ router.put("/profile", validate(V.updateProfileValidator), Controller.updateProf
 // ── Attendance ────────────────────────────────
 router.get("/attendance", Controller.getAttendance);
 router.get("/attendance/summary", Controller.getAttendanceSummary);
+router.get("/attendance/history", Controller.getAttendanceHistory);
 
 // ── Homework ─────────────────────────────────
 router.get("/homework", Controller.getPendingHomework);
@@ -39,6 +40,10 @@ router.get("/marks", Controller.getMarks);
 
 // ── Timetable ────────────────────────────────
 router.get("/timetable", Controller.getTimetable);
+
+// ── Fee Records ─────────────────────────────
+router.get("/fee-records", Controller.getFeeRecords);
+router.get("/fee-records/:id", Controller.getFeeRecordDetail);
 
 // ── Notifications ───────────────────────────
 router.get("/notifications", Controller.getNotifications);

@@ -38,6 +38,18 @@ export const getChildAttendanceSummary = asyncHandler(async (req: AuthRequest, r
   return ApiResponse.success(res, result, "Child attendance summary");
 });
 
+// ── Child Fee Records ─────────────────────────
+
+export const getChildFeeRecords = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const result = await ParentService.getChildFeeRecords(req.user!.id, req.user!.tenantId, req.params.studentId);
+  return ApiResponse.success(res, result, "Child fee records");
+});
+
+export const getChildFeeRecordDetail = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const result = await ParentService.getChildFeeRecordDetail(req.user!.id, req.user!.tenantId, req.params.studentId, req.params.feeRecordId);
+  return ApiResponse.success(res, result, "Child fee record detail");
+});
+
 // ── Homework ─────────────────────────────────
 
 export const getChildHomework = asyncHandler(async (req: AuthRequest, res: Response) => {

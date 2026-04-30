@@ -8,17 +8,17 @@ import * as controller from "./auth.controller";
 import * as validator from "./auth.validator";
 import { validateBody } from "../../middleware/validateRequest";
 import { authMiddleware } from "../../middleware/auth";
-import { authLimiter } from "../../middleware/rateLimiter";
+import { authLimiter, loginLimiter, passwordResetLimiter } from "../../middleware/rateLimiter";
 import { uploadSingle } from "../../middleware/uploadMiddleware";
 
 const router = Router();
 
 // Public routes
 router.post("/register", authLimiter, validateBody(validator.registerValidator), controller.register);
-router.post("/login", authLimiter, validateBody(validator.loginValidator), controller.login);
+router.post("/login", loginLimiter, validateBody(validator.loginValidator), controller.login);
 router.post("/refresh", validateBody(validator.refreshValidator), controller.refresh);
-router.post("/forgot-password", authLimiter, validateBody(validator.forgotPasswordValidator), controller.forgotPassword);
-router.post("/reset-password", validateBody(validator.resetPasswordValidator), controller.resetPassword);
+router.post("/forgot-password", passwordResetLimiter, validateBody(validator.forgotPasswordValidator), controller.forgotPassword);
+router.post("/reset-password", passwordResetLimiter, validateBody(validator.resetPasswordValidator), controller.resetPassword);
 router.post("/verify-otp", validateBody(validator.verifyOTPValidator), controller.verifyOTP);
 router.post("/resend-otp", authLimiter, validateBody(validator.resendOTPValidator), controller.resendOTP);
 router.post("/verify-2fa", validateBody(validator.verify2FAValidator), controller.verify2FA);

@@ -613,3 +613,151 @@ export async function toggleAdStatus(id: string) {
 
   return { status: updated.status, message: `Ad is now ${updated.status}` };
 }
+
+// ── Bulk User Creation ──
+
+export interface BulkUserInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  role: UserRole;
+  tenantId: string;
+  password?: string;
+  gender?: string;
+}
+
+export async function bulkCreateUsers(users: BulkUserInput[]) {
+  if (!Array.isArray(users) || users.length === 0) {
+    throw ApiError.badRequest("Expected non-empty array of users", "EMPTY_USERS_ARRAY");
+  }
+  if (users.length > 500) {
+    throw ApiError.badRequest("Maximum 500 users per batch", "BATCH_TOO_LARGE");
+  }
+
+  const result = { success: 0, failed: 0, errors: [] as { index: number; error: string }[], created: [] as { id: string; email: string }[] };
+
+  for (let i = 0; i < users.length; i++) {
+    const u = users[i];
+    try {
+      const tenant = await prisma.tenant.findUnique({ where: { id: u.tenantId }, select: { code: true } });
+      if (!tenant) {
+        result.failed++;
+        result.errors.push({ index: i, error: "Tenant not found" });
+        continue;
+      }
+
+      const existing = await prisma.user.findFirst({ where: { email: u.email, tenantId: u.tenantId } });
+      if (existing) {
+        result.failed++;
+        result.errors.push({ index: i, error: "Email already exists in this tenant" });
+        continue;
+      }
+
+      const passwordHash = await hashPassword(u.password || "Acadivo@123");
+      const rolePrefix = u.role.substring(0, 2).toUpperCase();
+      const uniqueId = `${rolePrefix}-${tenant.code}-${Date.now().toString(36).toUpperCase()}-${String(i + 1).padStart(3, "0")}`;
+
+      const user = await prisma.user.create({
+        data: {
+          uniqueId,
+          email: u.email,
+          passwordHash,
+          role: u.role,
+          tenantId: u.tenantId,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          phone: u.phone || "",
+          gender: (u.gender as any) || undefined,
+          isVerified: true,
+        },
+      });
+
+      // Create role-specific profile
+      if (u.role === "STUDENT") {
+        await prisma.student.create({
+          data: { userId: user.id, tenantId: u.tenantId, rollNumber: uniqueId, classId: "", sectionId: "", guardianName: "", guardianPhone: "", guardianRelation: "GUARDIAN" },
+        });
+      } else if (u.role === "TEACHER") {
+        await prisma.teacher.create({ data: { userId: user.id, tenantId: u.tenantId } });
+      } else if (u.role === "PARENT") {
+        await prisma.parent.create({ data: { userId: user.id, tenantId: u.tenantId } });
+      } else if (u.role === "PRINCIPAL") {
+        await prisma.principal.create({ data: { userId: user.id, tenantId: u.tenantId } });
+      } else if (u.role === "ADMIN") {
+        await prisma.schoolAdmin.create({ data: { userId: user.id, tenantId: u.tenantId } });
+      }
+
+      result.success++;
+      result.created.push({ id: user.id, email: user.email });
+
+      // Fire-and-forget welcome email
+      sendWelcomeEmail(u.email, `${u.firstName} ${u.lastName}`, `${env.WEB_URL}/login`).catch(() => {});
+    } catch (err: any) {
+      result.failed++;
+      result.errors.push({ index: i, error: err.message });
+    }
+  }
+
+  logger.info(`Bulk user creation: ${result.success} success, ${result.failed} failed`);
+  return result;
+}
+
+// ── System-wide Settings ──
+
+const SYSTEM_TENANT_ID = "00000000-0000-0000-0000-000000000000";
+
+export async function getSystemSettings() {
+  // Get settings from the system tenant
+  const settings = await prisma.setting.findMany({
+    where: { tenantId: SYSTEM_TENANT_ID },
+    orderBy: { category: "asc" },
+  });
+
+  // Also return computed stats
+  const [totalUsers, totalTenants, totalMessages] = await Promise.all([
+    prisma.user.count(),
+    prisma.tenant.count(),
+    prisma.message.count(),
+  ]);
+
+  return {
+    settings,
+    stats: { totalUsers, totalTenants, totalMessages },
+  };
+}
+
+export async function updateSystemSetting(key: string, value: string, category: string = "GENERAL") {
+  const setting = await prisma.setting.upsert({
+    where: {
+      tenantId_key: {
+        tenantId: SYSTEM_TENANT_ID,
+        key,
+      },
+    },
+    create: {
+      tenantId: SYSTEM_TENANT_ID,
+      key,
+      value,
+      category: category as any,
+    },
+    update: {
+      value,
+      category: category as any,
+    },
+  });
+
+  return setting;
+}
+
+export async function deleteSystemSetting(key: string) {
+  await prisma.setting.delete({
+    where: {
+      tenantId_key: {
+        tenantId: SYSTEM_TENANT_ID,
+        key,
+      },
+    },
+  });
+  return { message: "Setting deleted" };
+}

@@ -98,3 +98,9 @@ export const updateAdValidator = Joi.object({
   maxClicks: Joi.number().integer().min(1).optional(),
   status: Joi.string().valid(...Object.values(AdStatus)).optional(),
 });
+
+export const updateSystemSettingValidator = Joi.object({
+  key: Joi.string().min(1).max(100).required(),
+  value: Joi.string().max(2000).required(),
+  category: Joi.string().valid("GENERAL", "ACADEMIC", "FEE", "COMMUNICATION", "NOTIFICATION").default("GENERAL"),
+});

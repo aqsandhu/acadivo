@@ -26,8 +26,10 @@ const envSchema = z.object({
   // JWT
   JWT_ACCESS_SECRET: z.string().min(1, "JWT_ACCESS_SECRET is required"),
   JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required"),
+  JWT_RESET_SECRET: z.string().min(1, "JWT_RESET_SECRET is required"),
   JWT_ACCESS_EXPIRY: z.string().default("15m"),
   JWT_REFRESH_EXPIRY: z.string().default("7d"),
+  JWT_RESET_EXPIRY: z.string().default("1h"),
 
   // Email / SMTP
   SMTP_HOST: z.string().optional(),

@@ -1,6 +1,6 @@
 /**
  * @file src/utils/jwt.ts
- * @description JWT sign and verify helper for access and refresh tokens.
+ * @description JWT sign and verify helper for access, refresh, and reset tokens.
  */
 
 import jwt, { SignOptions, VerifyOptions, JwtPayload } from "jsonwebtoken";
@@ -27,6 +27,8 @@ export function signToken(
       ? env.JWT_ACCESS_SECRET
       : payload.type === "refresh"
       ? env.JWT_REFRESH_SECRET
+      : payload.type === "reset"
+      ? env.JWT_RESET_SECRET
       : env.JWT_ACCESS_SECRET;
 
   const expiresIn =
@@ -35,6 +37,8 @@ export function signToken(
       ? env.JWT_ACCESS_EXPIRY
       : payload.type === "refresh"
       ? env.JWT_REFRESH_EXPIRY
+      : payload.type === "reset"
+      ? env.JWT_RESET_EXPIRY
       : "1h");
 
   return jwt.sign(payload, secret, { ...options, expiresIn });
@@ -48,7 +52,13 @@ export function verifyToken(
   type: TokenPayload["type"] = "access"
 ): TokenPayload {
   const secret =
-    type === "access" ? env.JWT_ACCESS_SECRET : type === "refresh" ? env.JWT_REFRESH_SECRET : env.JWT_ACCESS_SECRET;
+    type === "access"
+      ? env.JWT_ACCESS_SECRET
+      : type === "refresh"
+      ? env.JWT_REFRESH_SECRET
+      : type === "reset"
+      ? env.JWT_RESET_SECRET
+      : env.JWT_ACCESS_SECRET;
 
   try {
     const decoded = jwt.verify(token, secret) as TokenPayload & JwtPayload;
