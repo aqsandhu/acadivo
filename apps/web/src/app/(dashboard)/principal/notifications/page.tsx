@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getNotifications, type NotificationItem } from "@/services/apiClient";
+import { useApi, getNotifications, type NotificationItem } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -23,7 +23,7 @@ export default function PrincipalNotificationsPage() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [target, setTarget] = useState("ALL");
-  const { data: notifications, loading } = useMockApi(getNotifications);
+  const { data: notifications, loading } = useApi(getNotifications);
 
   const handleSend = () => {
     addToast({ title: "Sent", description: `Notification sent to ${target}`, variant: "success" });

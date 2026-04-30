@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { BarChart3, TrendingUp, Users, School, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockApi, getDashboardStats, getSchools } from "@/services/apiClient";
+import { useApi, getDashboardStats, getSchools } from "@/services/apiClient";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, AreaChart, Area,
@@ -12,8 +12,8 @@ import {
 
 export default function AnalyticsPage() {
   const { t } = useTranslation();
-  const { data: stats, loading } = useMockApi(getDashboardStats);
-  const { data: schools } = useMockApi(() => getSchools());
+  const { data: stats, loading } = useApi(getDashboardStats);
+  const { data: schools } = useApi(() => getSchools());
 
   const activityData = [
     { day: "Mon", active: 320, new: 45 }, { day: "Tue", active: 410, new: 38 },

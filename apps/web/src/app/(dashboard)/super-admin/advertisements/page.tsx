@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useMockApi, getAdvertisements, createAdvertisement, updateAdvertisement, deleteAdvertisement, type Advertisement } from "@/services/apiClient";
+import { useApi, getAdvertisements, createAdvertisement, updateAdvertisement, deleteAdvertisement, type Advertisement } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -25,7 +25,7 @@ export default function AdvertisementsPage() {
   const [editAd, setEditAd] = useState<Advertisement | null>(null);
   const [form, setForm] = useState<Partial<Advertisement>>({});
 
-  const { data: ads, loading, refetch } = useMockApi(getAdvertisements);
+  const { data: ads, loading, refetch } = useApi(getAdvertisements);
 
   const handleSave = async () => {
     try {

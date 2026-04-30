@@ -1,0 +1,104 @@
+# =============================================================================
+# Acadivo — Database Migration Kubernetes Job
+# Runs Prisma migrations before application deployment
+# Usage: kubectl apply -f infrastructure/k8s/migration-job.yaml
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: acadivo-db-migrate
+  namespace: acadivo
+  labels:
+    app: acadivo
+    component: migration
+spec:
+  template:
+    metadata:
+      labels:
+        app: acadivo
+        component: migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: ghcr.io/acadivo/acadivo-api:latest
+          command: ["npx", "prisma", "migrate", "deploy", "--schema=./prisma/schema.prisma"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: acadivo-secrets
+                  key: DATABASE_URL
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      # Ensure migrations run in the correct order with app pods
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL to be ready..."
+              until nc -z $PGHOST $PGPORT; do
+                echo "PostgreSQL is not ready yet. Retrying in 5s..."
+                sleep 5
+              done
+              echo "PostgreSQL is ready!"
+          env:
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: acadivo-secrets
+                  key: PGHOST
+            - name: PGPORT
+              value: "5432"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+---
+# CronJob for running migrations periodically (e.g., after deployments)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: acadivo-db-migrate-cron
+  namespace: acadivo
+spec:
+  schedule: "0 2 * * *"  # Run daily at 2 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: migrate
+              image: ghcr.io/acadivo/acadivo-api:latest
+              command: ["npx", "prisma", "migrate", "deploy", "--schema=./prisma/schema.prisma"]
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: acadivo-secrets
+                      key: DATABASE_URL
+                - name: NODE_ENV
+                  value: "production"
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi

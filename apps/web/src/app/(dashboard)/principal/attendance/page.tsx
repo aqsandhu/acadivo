@@ -11,14 +11,14 @@ import { Select, SelectOption } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getAttendance, getStudents } from "@/services/apiClient";
+import { useApi, getAttendance, getStudents } from "@/services/apiClient";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line } from "recharts";
 
 export default function PrincipalAttendancePage() {
   const { t } = useTranslation();
   const [classFilter, setClassFilter] = useState("");
-  const { data: attendance, loading } = useMockApi(() => getAttendance({ class: classFilter || undefined }));
-  const { data: students } = useMockApi(getStudents);
+  const { data: attendance, loading } = useApi(() => getAttendance({ class: classFilter || undefined }));
+  const { data: students } = useApi(getStudents);
 
   const today = new Date().toISOString().split("T")[0];
   const todayAttendance = attendance?.filter((a) => a.date === today) || [];

@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useMockApi, getParents, createParent, updateParent, deleteParent, type Parent } from "@/services/apiClient";
+import { useApi, getParents, createParent, updateParent, deleteParent, type Parent } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -26,7 +26,7 @@ export default function AdminParentsPage() {
   const [editParent, setEditParent] = useState<Parent | null>(null);
   const [form, setForm] = useState<Partial<Parent>>({});
 
-  const { data: parents, loading, refetch } = useMockApi(() => getParents({ search: search || undefined }));
+  const { data: parents, loading, refetch } = useApi(() => getParents({ search: search || undefined }));
 
   const handleSave = async () => {
     try {

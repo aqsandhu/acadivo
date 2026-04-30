@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockApi, getConversations, getMessages, type Conversation, type Message } from "@/services/apiClient";
+import { useApi, getConversations, getMessages, type Conversation, type Message } from "@/services/apiClient";
 
 export default function PrincipalMessagesPage() {
   const { t } = useTranslation();
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
   const [messageText, setMessageText] = useState("");
-  const { data: conversations, loading: convLoading } = useMockApi(getConversations);
-  const { data: messages, loading: msgLoading } = useMockApi(() => getMessages(selectedConv?.id));
+  const { data: conversations, loading: convLoading } = useApi(getConversations);
+  const { data: messages, loading: msgLoading } = useApi(() => getMessages(selectedConv?.id));
 
   return (
     <div className="space-y-6">

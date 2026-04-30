@@ -1,19 +1,21 @@
+// lib/services/push_notification_service.dart
+import 'dart:async';
 import 'dart:io';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../constants/api_constants.dart';
 import '../storage/preferences.dart';
+import '../storage/secure_storage.dart';
+import 'api_service.dart';
 
-/// Background message handler for Firebase
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
 }
 
-/// Push Notification Service using Firebase Cloud Messaging + flutter_local_notifications
 class PushNotificationService {
   static final PushNotificationService _instance = PushNotificationService._internal();
   factory PushNotificationService() => _instance;
@@ -21,173 +23,157 @@ class PushNotificationService {
 
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-
   bool _initialized = false;
+  String? _currentFcmToken;
+  StreamSubscription<String>? _tokenRefreshSubscription;
 
-  /// Initialize Firebase and local notifications
+  String? get currentToken => _currentFcmToken;
+
   Future<void> initialize() async {
     if (_initialized) return;
-
-    // Initialize Firebase
     await Firebase.initializeApp();
-
-    // Set background message handler
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    // Request permission (iOS)
-    if (Platform.isIOS) {
-      await _messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-    }
-
-    // Initialize local notifications
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    const initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
-    await _localNotifications.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTap,
-    );
-
-    // Create notification channel for Android
-    if (Platform.isAndroid) {
-      const channel = AndroidNotificationChannel(
-        'high_importance_channel',
-        'High Importance Notifications',
-        description: 'This channel is used for important notifications.',
-        importance: Importance.high,
-      );
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(channel);
-    }
-
-    // Listen to foreground messages
+    await _requestPermissions();
+    await _initLocalNotifications();
+    await _createAndroidChannels();
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-
-    // Listen to notification taps when app is in background/terminated
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
-
+    _tokenRefreshSubscription = _messaging.onTokenRefresh.listen(_onTokenRefresh);
+    await _registerInitialToken();
+    _schedulePeriodicTokenCheck();
     _initialized = true;
   }
 
-  /// Get FCM token
-  Future<String?> getToken() async {
-    return await _messaging.getToken();
-  }
-
-  /// Subscribe to a topic
-  Future<void> subscribeToTopic(String topic) async {
-    await _messaging.subscribeToTopic(topic);
-  }
-
-  /// Unsubscribe from a topic
-  Future<void> unsubscribeFromTopic(String topic) async {
-    await _messaging.unsubscribeFromTopic(topic);
-  }
-
-  /// Check if push notifications are enabled in preferences
-  bool _isPushEnabled() {
-    try {
-      return Preferences.instance.getPushNotifications();
-    } catch (_) {
-      return true;
+  Future<void> _requestPermissions() async {
+    if (Platform.isIOS) {
+      await _messaging.requestPermission(alert: true, badge: true, sound: true);
+    } else if (Platform.isAndroid) {
+      await _messaging.requestPermission(alert: true, badge: true, sound: true);
     }
+    await _messaging.setAutoInitEnabled(true);
   }
 
-  /// Check if notification sounds are enabled in preferences
-  bool _isSoundEnabled() {
-    try {
-      return Preferences.instance.getNotificationSounds();
-    } catch (_) {
-      return true;
-    }
-  }
-
-  /// Handle foreground messages
-  void _handleForegroundMessage(RemoteMessage message) {
-    if (!_isPushEnabled()) return;
-
-    final notification = message.notification;
-    final android = message.notification?.android;
-
-    if (notification != null) {
-      _localNotifications.show(
-        notification.hashCode,
-        notification.title,
-        notification.body,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            'high_importance_channel',
-            'High Importance Notifications',
-            channelDescription: 'This channel is used for important notifications.',
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: android?.smallIcon ?? '@mipmap/ic_launcher',
-            playSound: _isSoundEnabled(),
-          ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: _isSoundEnabled(),
-          ),
-        ),
-        payload: message.data['route'] ?? '',
-      );
-    }
-  }
-
-  /// Handle notification tap
-  void _onNotificationTap(NotificationResponse response) {
-    final payload = response.payload;
-    if (payload != null && payload.isNotEmpty) {
-      // Navigate based on payload
-      debugPrint('Notification tapped: $payload');
-    }
-  }
-
-  /// Handle message opened app
-  void _handleMessageOpenedApp(RemoteMessage message) {
-    debugPrint('Message opened app: ${message.messageId}');
-    // Handle navigation based on message data
-  }
-
-  /// Show a local notification manually
-  Future<void> showNotification({
-    required int id,
-    required String title,
-    required String body,
-    String? payload,
-  }) async {
-    if (!_isPushEnabled()) return;
-    await _localNotifications.show(
-      id,
-      title,
-      body,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          'high_importance_channel',
-          'High Importance Notifications',
-          channelDescription: 'This channel is used for important notifications.',
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-          playSound: _isSoundEnabled(),
-        ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: _isSoundEnabled(),
-        ),
-      ),
-      payload: payload ?? '',
+  Future<void> _initLocalNotifications() async {
+    const initSettings = InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(requestAlertPermission: true, requestBadgePermission: true, requestSoundPermission: true),
+    );
+    await _localNotifications.initialize(initSettings,
+      onDidReceiveNotificationResponse: _onNotificationTap,
+      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTap,
     );
   }
+
+  Future<void> _createAndroidChannels() async {
+    if (!Platform.isAndroid) return;
+    final androidPlugin = _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    const channels = [
+      AndroidNotificationChannel('high_importance_channel', 'High Importance', importance: Importance.high),
+      AndroidNotificationChannel('announcements_channel', 'Announcements', importance: Importance.high),
+      AndroidNotificationChannel('homework_channel', 'Homework', importance: Importance.defaultImportance),
+      AndroidNotificationChannel('messages_channel', 'Messages', importance: Importance.high),
+    ];
+    for (final ch in channels) { await androidPlugin?.createNotificationChannel(ch); }
+  }
+
+  Future<void> _registerInitialToken() async {
+    try {
+      _currentFcmToken = await _messaging.getToken();
+      if (_currentFcmToken != null && _currentFcmToken!.isNotEmpty) {
+        await Preferences.instance.setFcmToken(_currentFcmToken!);
+        await SecureStorage().setFcmToken(_currentFcmToken!);
+        await _sendTokenToBackend(_currentFcmToken!);
+      }
+    } catch (e) { debugPrint('[FCM] Initial token error: $e'); }
+  }
+
+  Future<void> _onTokenRefresh(String newToken) async {
+    if (_currentFcmToken == newToken) return;
+    _currentFcmToken = newToken;
+    await Preferences.instance.setFcmToken(newToken);
+    await SecureStorage().setFcmToken(newToken);
+    await _sendTokenToBackend(newToken);
+  }
+
+  Future<bool> _sendTokenToBackend(String token) async {
+    try {
+      final connectivity = await Connectivity().checkConnectivity();
+      if (connectivity == ConnectivityResult.none) return false;
+      final apiService = ApiServiceProvider.instance;
+      final response = await apiService.dio.post(ApiConstants.registerFcmToken,
+        data: {'fcmToken': token, 'platform': Platform.isIOS ? 'ios' : 'android'});
+      return response.statusCode == 200;
+    } catch (e) { return false; }
+  }
+
+  void _schedulePeriodicTokenCheck() {
+    Timer.periodic(const Duration(hours: 24), (_) async {
+      final currentToken = await _messaging.getToken();
+      if (currentToken != null && currentToken != _currentFcmToken) {
+        await _onTokenRefresh(currentToken);
+      } else if (_currentFcmToken != null) {
+        await _sendTokenToBackend(_currentFcmToken!);
+      }
+    });
+  }
+
+  void _handleForegroundMessage(RemoteMessage message) {
+    final notification = message.notification;
+    if (notification == null) return;
+    final data = message.data;
+    final String channelId;
+    final String channelName;
+    final type = data['type'] ?? data['category'];
+    switch (type) { case 'announcement': channelId = 'announcements_channel'; channelName = 'Announcements'; break; case 'homework': channelId = 'homework_channel'; channelName = 'Homework'; break; case 'message': channelId = 'messages_channel'; channelName = 'Messages'; break; default: channelId = 'high_importance_channel'; channelName = 'High Importance'; }
+    _localNotifications.show(notification.hashCode, notification.title, notification.body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(channelId, channelName, importance: Importance.high, priority: Priority.high,
+          icon: message.notification?.android?.smallIcon ?? '@mipmap/ic_launcher'),
+        iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+      ), payload: data['route'] ?? data['screen'] ?? '',
+    );
+  }
+
+  void _onNotificationTap(NotificationResponse response) {
+    if (response.payload != null && response.payload!.isNotEmpty) {
+      debugPrint('Notification tapped: ${response.payload}');
+    }
+  }
+
+  @pragma('vm:entry-point')
+  static void _onBackgroundNotificationTap(NotificationResponse response) {
+    debugPrint('Background notification tapped: ${response.payload}');
+  }
+
+  void _handleMessageOpenedApp(RemoteMessage message) {
+    debugPrint('Message opened app: ${message.messageId}');
+  }
+
+  Future<String?> getToken() async {
+    if (_currentFcmToken != null) return _currentFcmToken;
+    _currentFcmToken = await _messaging.getToken();
+    return _currentFcmToken;
+  }
+
+  Future<String?> refreshToken() async {
+    await _messaging.deleteToken();
+    _currentFcmToken = await _messaging.getToken();
+    if (_currentFcmToken != null) await _onTokenRefresh(_currentFcmToken!);
+    return _currentFcmToken;
+  }
+
+  Future<void> subscribeToTopic(String topic) async => await _messaging.subscribeToTopic(topic);
+  Future<void> unsubscribeFromTopic(String topic) async => await _messaging.unsubscribeFromTopic(topic);
+
+  Future<void> showNotification({required int id, required String title, required String body, String? payload}) async {
+    await _localNotifications.show(id, title, body,
+      NotificationDetails(
+        android: AndroidNotificationDetails('high_importance_channel', 'High Importance Notifications',
+          importance: Importance.high, priority: Priority.high, icon: '@mipmap/ic_launcher'),
+        iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+      ), payload: payload ?? '',
+    );
+  }
+
+  void dispose() { _tokenRefreshSubscription?.cancel(); }
 }

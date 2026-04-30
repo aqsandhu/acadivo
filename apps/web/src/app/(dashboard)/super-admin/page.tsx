@@ -1,19 +1,15 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
+import Link from "next/link";
 import {
-  School,
-  Users,
-  CreditCard,
-  MessageSquare,
-  UserPlus,
-  Activity,
-  Plus,
-  Megaphone,
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
+  School, Users, CreditCard, MessageSquare, UserPlus, Activity,
+  Plus, Megaphone, BarChart3, TrendingUp, TrendingDown,
 } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
+} from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,12 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getDashboardStats, getSchools, type DashboardStats, type School } from "@/services/apiClient";
-import Link from "next/link";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
-} from "recharts";
+import { useApi, getDashboardStats, getSchools } from "@/services/apiClient";
+import type { School as SchoolType } from "@/types";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
@@ -50,33 +42,39 @@ function StatCard({ label, value, icon, change }: { label: string; value: string
   );
 }
 
+/**
+ * Extract city from school address for chart grouping.
+ * Falls back to "Unknown" if address is not provided.
+ */
+function getSchoolCity(school: SchoolType): string {
+  if (!school.address) return "Unknown";
+  const parts = school.address.split(",");
+  return parts[parts.length - 1]?.trim() || "Unknown";
+}
+
 export default function SuperAdminDashboard() {
   const { t } = useTranslation();
-  const { data: stats, loading: statsLoading } = useMockApi(getDashboardStats);
-  const { data: schools, loading: schoolsLoading } = useMockApi(() => getSchools());
+  const { data: stats, loading: statsLoading } = useApi(getDashboardStats);
+  const { data: schools, loading: schoolsLoading } = useApi(() => getSchools());
 
   const schoolsByCity = schools
     ? Object.entries(
-        schools.reduce((acc, s) => {
-          acc[s.city] = (acc[s.city] || 0) + 1;
+        schools.reduce((acc: Record<string, number>, s: SchoolType) => {
+          const city = getSchoolCity(s);
+          acc[city] = (acc[city] || 0) + 1;
           return acc;
         }, {} as Record<string, number>)
       ).map(([name, value]) => ({ name, value }))
     : [];
 
-  const userGrowth = [
-    { month: "Jan", users: 120 }, { month: "Feb", users: 180 }, { month: "Mar", users: 250 },
-    { month: "Apr", users: 320 }, { month: "May", users: 400 }, { month: "Jun", users: 520 },
-  ];
-
-  const revenueTrend = [
-    { month: "Jan", revenue: 50000 }, { month: "Feb", revenue: 65000 }, { month: "Mar", revenue: 80000 },
-    { month: "Apr", revenue: 72000 }, { month: "May", revenue: 95000 }, { month: "Jun", revenue: 110000 },
-  ];
-
-  const subscriptionDist = [
-    { name: "Basic", value: 3 }, { name: "Standard", value: 4 }, { name: "Premium", value: 2 }, { name: "Enterprise", value: 1 },
-  ];
+  const planDist = schools
+    ? Object.entries(
+        schools.reduce((acc: Record<string, number>, s: SchoolType) => {
+          acc[s.plan] = (acc[s.plan] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      ).map(([name, value]) => ({ name, value }))
+    : [];
 
   return (
     <div className="space-y-6">
@@ -110,56 +108,40 @@ export default function SuperAdminDashboard() {
         <Card>
           <CardHeader><CardTitle>Schools by City</CardTitle></CardHeader>
           <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={schoolsByCity}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {schoolsByCity.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={schoolsByCity}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                {schoolsLoading ? <Skeleton className="h-48 w-full" /> : "No school data available"}
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>User Growth</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Subscription Plans</CardTitle></CardHeader>
           <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={userGrowth}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="users" stroke="#10b981" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Revenue Trend</CardTitle></CardHeader>
-          <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Subscription Distribution</CardTitle></CardHeader>
-          <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={subscriptionDist} cx="50%" cy="50%" outerRadius={100} dataKey="value" label>
-                  {subscriptionDist.map((_, i) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {planDist.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={planDist} cx="50%" cy="50%" outerRadius={100} dataKey="value" label>
+                    {planDist.map((_, i) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                {schoolsLoading ? <Skeleton className="h-48 w-full" /> : "No subscription data available"}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -182,10 +164,10 @@ export default function SuperAdminDashboard() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>City</TableHead>
+                  <TableHead>Location</TableHead>
                   <TableHead>Plan</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Users</TableHead>
+                  <TableHead>Max Students</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -193,14 +175,14 @@ export default function SuperAdminDashboard() {
                 {schools.slice(0, 5).map((school) => (
                   <TableRow key={school.id}>
                     <TableCell className="font-medium">{school.name}</TableCell>
-                    <TableCell>{school.city}</TableCell>
+                    <TableCell>{getSchoolCity(school)}</TableCell>
                     <TableCell>{school.plan}</TableCell>
                     <TableCell>
-                      <Badge variant={school.status === "ACTIVE" ? "default" : school.status === "PENDING" ? "secondary" : "destructive"}>
+                      <Badge variant={school.status === "active" ? "default" : school.status === "inactive" ? "secondary" : "destructive"}>
                         {school.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{school.userCount}</TableCell>
+                    <TableCell>{school.maxStudents}</TableCell>
                     <TableCell>
                       <Link href={`/super-admin/schools`}><Button variant="ghost" size="sm">View</Button></Link>
                     </TableCell>

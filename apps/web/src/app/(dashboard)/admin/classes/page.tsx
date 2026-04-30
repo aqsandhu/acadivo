@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useMockApi, getClasses, createClass, type ClassSection } from "@/services/apiClient";
+import { useApi, getClasses, createClass, type ClassSection } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -23,7 +23,7 @@ export default function AdminClassesPage() {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<Partial<ClassSection>>({});
-  const { data: classes, loading, refetch } = useMockApi(getClasses);
+  const { data: classes, loading, refetch } = useApi(getClasses);
 
   const handleAdd = async () => {
     try {

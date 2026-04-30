@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useMockApi, getTeachers, createTeacher, updateTeacher, deleteTeacher, type Teacher } from "@/services/apiClient";
+import { useApi, getTeachers, createTeacher, updateTeacher, deleteTeacher, type Teacher } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -26,7 +26,7 @@ export default function AdminTeachersPage() {
   const [editTeacher, setEditTeacher] = useState<Teacher | null>(null);
   const [form, setForm] = useState<Partial<Teacher>>({});
 
-  const { data: teachers, loading, refetch } = useMockApi(() => getTeachers({ search: search || undefined }));
+  const { data: teachers, loading, refetch } = useApi(() => getTeachers({ search: search || undefined }));
 
   const handleSave = async () => {
     try {

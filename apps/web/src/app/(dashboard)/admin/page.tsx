@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
+import Link from "next/link";
 import {
   GraduationCap, Users, UserCircle, School, Wallet, ClipboardList,
   Bell, Plus, Calendar, AlertCircle, TrendingUp, TrendingDown,
@@ -8,8 +9,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockApi, getAdminStats, getTeachers, getStudents, getParents, getClasses, getFeeRecords } from "@/services/apiClient";
-import Link from "next/link";
+import { useApi, getAdminStats, getNotifications } from "@/services/apiClient";
 
 function StatCard({ label, value, icon, change }: { label: string; value: string | number; icon: React.ReactNode; change?: number }) {
   return (
@@ -33,7 +33,8 @@ function StatCard({ label, value, icon, change }: { label: string; value: string
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
-  const { data: stats, loading: statsLoading } = useMockApi(getAdminStats);
+  const { data: stats, loading: statsLoading } = useApi(getAdminStats);
+  const { data: notifications, loading: notifLoading } = useApi(getNotifications);
 
   return (
     <div className="space-y-6">
@@ -55,7 +56,7 @@ export default function AdminDashboard() {
             <StatCard label="Parents" value={stats?.parents || 0} icon={<UserCircle className="h-4 w-4" />} />
             <StatCard label="Classes" value={stats?.classes || 0} icon={<School className="h-4 w-4" />} />
             <StatCard label="Pending Fee" value={`PKR ${(stats?.pendingFee || 0).toLocaleString()}`} icon={<Wallet className="h-4 w-4" />} change={-8} />
-            <StatCard label="Today\'s Attendance" value={`${stats?.attendanceToday || 0}%`} icon={<ClipboardList className="h-4 w-4" />} />
+            <StatCard label="Today's Attendance" value={`${stats?.attendanceToday || 0}%`} icon={<ClipboardList className="h-4 w-4" />} />
           </>
         )}
       </div>
@@ -72,11 +73,29 @@ export default function AdminDashboard() {
         </Card>
         <Card>
           <CardHeader><CardTitle>Recent Activities</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-3 text-sm"><AlertCircle className="h-4 w-4 text-blue-500" /><span>New student registered: Ali Khan</span></div>
-            <div className="flex items-center gap-3 text-sm"><AlertCircle className="h-4 w-4 text-green-500" /><span>Fee collected: PKR 15,000</span></div>
-            <div className="flex items-center gap-3 text-sm"><AlertCircle className="h-4 w-4 text-amber-500" /><span>Attendance marked for Class 5</span></div>
-            <div className="flex items-center gap-3 text-sm"><AlertCircle className="h-4 w-4 text-purple-500" /><span>Teacher assigned to Math</span></div>
+          <CardContent>
+            {notifLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-5 w-full" />
+                ))}
+              </div>
+            ) : !notifications?.length ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">No recent activities</div>
+            ) : (
+              <div className="space-y-3">
+                {notifications.slice(0, 5).map((n) => (
+                  <div key={n.id} className="flex items-center gap-3 text-sm">
+                    <AlertCircle className={`h-4 w-4 ${
+                      n.type === "error" ? "text-red-500" :
+                      n.type === "success" ? "text-green-500" :
+                      n.type === "warning" ? "text-amber-500" : "text-blue-500"
+                    }`} />
+                    <span>{n.title}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

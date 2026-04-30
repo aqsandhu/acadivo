@@ -12,13 +12,13 @@ import { Select, SelectOption } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getParents } from "@/services/apiClient";
+import { useApi, getParents } from "@/services/apiClient";
 
 export default function PrincipalParentsPage() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const { data: parents, loading } = useMockApi(() => getParents({ search: search || undefined, status: statusFilter || undefined }));
+  const { data: parents, loading } = useApi(() => getParents({ search: search || undefined, status: statusFilter || undefined }));
 
   return (
     <div className="space-y-6">

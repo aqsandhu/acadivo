@@ -12,14 +12,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getTeachers, type Teacher } from "@/services/apiClient";
+import { useApi, getTeachers, type Teacher } from "@/services/apiClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PrincipalTeachersPage() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
-  const { data: teachers, loading } = useMockApi(() => getTeachers({ search: search || undefined }));
+  const { data: teachers, loading } = useApi(() => getTeachers({ search: search || undefined }));
 
   return (
     <div className="space-y-6">

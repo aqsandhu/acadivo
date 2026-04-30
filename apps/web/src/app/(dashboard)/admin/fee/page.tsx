@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useMockApi, getFeeStructures, getFeeRecords, createFeeStructure, type FeeStructure } from "@/services/apiClient";
+import { useApi, getFeeStructures, getFeeRecords, createFeeStructure, type FeeStructure } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -24,8 +24,8 @@ export default function AdminFeePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<Partial<FeeStructure>>({});
 
-  const { data: structures, loading: structLoading } = useMockApi(getFeeStructures);
-  const { data: records, loading: recLoading } = useMockApi(getFeeRecords);
+  const { data: structures, loading: structLoading } = useApi(getFeeStructures);
+  const { data: records, loading: recLoading } = useApi(getFeeRecords);
 
   const handleAdd = async () => {
     try {

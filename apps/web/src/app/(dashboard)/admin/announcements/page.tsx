@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getAnnouncements, createAnnouncement, deleteAnnouncement } from "@/services/apiClient";
+import { useApi, getAnnouncements, createAnnouncement, deleteAnnouncement } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -22,7 +22,7 @@ export default function AdminAnnouncementsPage() {
   const { toasts, addToast, removeToast } = useToast();
   const [form, setForm] = useState({ title: "", content: "", targetAudience: ["ALL"], priority: "MEDIUM" as const });
 
-  const { data: announcements, loading, refetch } = useMockApi(getAnnouncements);
+  const { data: announcements, loading, refetch } = useApi(getAnnouncements);
 
   const handleCreate = async () => {
     try {

@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useMockApi, getSubjects, type Subject } from "@/services/apiClient";
+import { useApi, getSubjects, type Subject } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -23,7 +23,7 @@ export default function AdminSubjectsPage() {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<Partial<Subject>>({});
-  const { data: subjects, loading } = useMockApi(getSubjects);
+  const { data: subjects, loading } = useApi(getSubjects);
 
   return (
     <div className="space-y-6">

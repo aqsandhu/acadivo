@@ -9,13 +9,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getSubscriptions, getSchools, type SubscriptionPlan, type School } from "@/services/apiClient";
+import { useApi, getSubscriptions, getSchools, type SubscriptionPlan, type School } from "@/services/apiClient";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 export default function SubscriptionsPage() {
   const { t } = useTranslation();
-  const { data: plans, loading: plansLoading } = useMockApi(getSubscriptions);
-  const { data: schools, loading: schoolsLoading } = useMockApi(() => getSchools());
+  const { data: plans, loading: plansLoading } = useApi(getSubscriptions);
+  const { data: schools, loading: schoolsLoading } = useApi(() => getSchools());
 
   const revenueData = plans?.map((p) => ({ name: p.name, revenue: p.price * (p.schoolCount || 0) })) || [];
 

@@ -1,16 +1,16 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
+import Link from "next/link";
 import {
   GraduationCap, Users, UserCircle, ClipboardList, Wallet, FileText,
-  Bell, MessageSquare, Calendar, AlertCircle, TrendingUp, TrendingDown,
+  Bell, MessageSquare, AlertCircle, TrendingUp, TrendingDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { useMockApi, getPrincipalStats, getTeachers, getStudents, getParents, getAnnouncements, getFeeRecords } from "@/services/apiClient";
-import Link from "next/link";
+import { useApi, getPrincipalStats, getAnnouncements, getFeeRecords } from "@/services/apiClient";
 
 function StatCard({ label, value, icon, change }: { label: string; value: string | number; icon: React.ReactNode; change?: number }) {
   return (
@@ -34,14 +34,11 @@ function StatCard({ label, value, icon, change }: { label: string; value: string
 
 export default function PrincipalDashboard() {
   const { t } = useTranslation();
-  const { data: stats, loading: statsLoading } = useMockApi(getPrincipalStats);
-  const { data: teachers } = useMockApi(getTeachers);
-  const { data: students } = useMockApi(getStudents);
-  const { data: parents } = useMockApi(getParents);
-  const { data: announcements } = useMockApi(getAnnouncements);
-  const { data: feeRecords } = useMockApi(getFeeRecords);
+  const { data: stats, loading: statsLoading } = useApi(getPrincipalStats);
+  const { data: announcements } = useApi(getAnnouncements);
+  const { data: feeRecords } = useApi(getFeeRecords);
 
-  const pendingFee = feeRecords?.filter((r) => r.status !== "PAID").reduce((s, r) => s + r.due, 0) || 0;
+  const pendingFee = feeRecords?.filter((r) => r.status !== "paid" && r.status !== "PAID").reduce((s, r) => s + (r.balance || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -61,7 +58,7 @@ export default function PrincipalDashboard() {
             <StatCard label="Total Teachers" value={stats?.totalTeachers || 0} icon={<GraduationCap className="h-4 w-4" />} change={5} />
             <StatCard label="Total Students" value={stats?.totalStudents || 0} icon={<Users className="h-4 w-4" />} change={8} />
             <StatCard label="Total Parents" value={stats?.totalParents || 0} icon={<UserCircle className="h-4 w-4" />} />
-            <StatCard label="Today\'s Attendance" value={`${stats?.attendanceToday || 0}%`} icon={<ClipboardList className="h-4 w-4" />} change={-2} />
+            <StatCard label="Today's Attendance" value={`${stats?.attendanceToday || 0}%`} icon={<ClipboardList className="h-4 w-4" />} change={-2} />
             <StatCard label="Fee Collection (Month)" value={`PKR ${(stats?.feeCollectionThisMonth || 0).toLocaleString()}`} icon={<Wallet className="h-4 w-4" />} change={12} />
             <StatCard label="Pending Reports" value={stats?.pendingReports || 0} icon={<FileText className="h-4 w-4" />} />
           </>
@@ -74,19 +71,35 @@ export default function PrincipalDashboard() {
           <CardContent className="space-y-3">
             {announcements?.slice(0, 5).map((a) => (
               <div key={a.id} className="flex items-start justify-between border-b pb-2 last:border-0">
-                <div><div className="font-medium text-sm">{a.title}</div><div className="text-xs text-muted-foreground">{a.targetAudience.join(", ")}</div></div>
-                <Badge variant={a.priority === "HIGH" ? "destructive" : "secondary"} className="text-xs">{a.priority}</Badge>
+                <div>
+                  <div className="font-medium text-sm">{a.title}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {a.targetRoles?.join(", ") || "All"}
+                  </div>
+                </div>
+                <Badge variant="secondary" className="text-xs">{a.author?.name || "Admin"}</Badge>
               </div>
             ))}
+            {(!announcements || announcements.length === 0) && (
+              <div className="py-4 text-center text-sm text-muted-foreground">No announcements yet</div>
+            )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle>Pending Items</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center gap-3 text-sm"><AlertCircle className="h-4 w-4 text-amber-500" /><span>Fee defaulters: PKR {pendingFee.toLocaleString()} pending</span></div>
-            <div className="flex items-center gap-3 text-sm"><FileText className="h-4 w-4 text-blue-500" /><span>Reports to review: {stats?.pendingReports || 0}</span></div>
-            <div className="flex items-center gap-3 text-sm"><Calendar className="h-4 w-4 text-green-500" /><span>Upcoming events this week</span></div>
-            <div className="flex items-center gap-3 text-sm"><MessageSquare className="h-4 w-4 text-purple-500" /><span>Unread messages: {stats?.unreadMessages || 0}</span></div>
+            <div className="flex items-center gap-3 text-sm">
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <span>Fee defaulters: PKR {pendingFee.toLocaleString()} pending</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <FileText className="h-4 w-4 text-blue-500" />
+              <span>Reports to review: {stats?.pendingReports || 0}</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <MessageSquare className="h-4 w-4 text-purple-500" />
+              <span>Unread messages: {stats?.unreadMessages || 0}</span>
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -96,9 +109,4 @@ export default function PrincipalDashboard() {
             <Link href="/principal/messages"><Button variant="outline" className="w-full justify-start" size="sm"><MessageSquare className="mr-2 h-4 w-4" />Message Teacher</Button></Link>
             <Link href="/principal/attendance"><Button variant="outline" className="w-full justify-start" size="sm"><ClipboardList className="mr-2 h-4 w-4" />View Attendance</Button></Link>
             <Link href="/principal/fee"><Button variant="outline" className="w-full justify-start" size="sm"><Wallet className="mr-2 h-4 w-4" />Fee Overview</Button></Link>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
+  

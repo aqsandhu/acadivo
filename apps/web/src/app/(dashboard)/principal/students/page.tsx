@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getStudents, type Student } from "@/services/apiClient";
+import { useApi, getStudents, type Student } from "@/services/apiClient";
 
 export default function PrincipalStudentsPage() {
   const { t } = useTranslation();
@@ -22,7 +22,7 @@ export default function PrincipalStudentsPage() {
   const [sectionFilter, setSectionFilter] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
-  const { data: students, loading } = useMockApi(() =>
+  const { data: students, loading } = useApi(() =>
     getStudents({ search: search || undefined, class: classFilter || undefined, section: sectionFilter || undefined })
   );
 

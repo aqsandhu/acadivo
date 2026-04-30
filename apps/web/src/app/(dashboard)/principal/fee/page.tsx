@@ -8,13 +8,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getFeeRecords, getStudents } from "@/services/apiClient";
+import { useApi, getFeeRecords, getStudents } from "@/services/apiClient";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 export default function PrincipalFeePage() {
   const { t } = useTranslation();
-  const { data: feeRecords, loading } = useMockApi(getFeeRecords);
-  const { data: students } = useMockApi(getStudents);
+  const { data: feeRecords, loading } = useApi(getFeeRecords);
+  const { data: students } = useApi(getStudents);
 
   const totalExpected = (feeRecords?.length || 0) * 2500;
   const totalCollected = feeRecords?.reduce((s, r) => s + r.paid, 0) || 0;

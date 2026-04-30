@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useMockApi, getUsers, type User } from "@/services/apiClient";
+import { useApi, getUsers, type User } from "@/services/apiClient";
 
 export default function UsersPage() {
   const { t } = useTranslation();
@@ -22,7 +22,7 @@ export default function UsersPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const { data: users, loading } = useMockApi(() =>
+  const { data: users, loading } = useApi(() =>
     getUsers({ search: search || undefined, role: roleFilter || undefined, status: statusFilter || undefined })
   );
 

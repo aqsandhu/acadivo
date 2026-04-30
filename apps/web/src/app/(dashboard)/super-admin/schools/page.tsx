@@ -19,7 +19,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { useMockApi, getSchools, createSchool, updateSchool, deleteSchool, type School } from "@/services/apiClient";
+import { useApi, getSchools, createSchool, updateSchool, deleteSchool, type School } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -35,7 +35,7 @@ export default function SchoolsPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<School>>({});
 
-  const { data: schools, loading, refetch } = useMockApi(() =>
+  const { data: schools, loading, refetch } = useApi(() =>
     getSchools({ search: search || undefined, city: cityFilter || undefined, status: statusFilter || undefined, plan: planFilter || undefined })
   );
 

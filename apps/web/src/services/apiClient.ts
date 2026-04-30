@@ -721,10 +721,10 @@ export const mockApi = {
 };
 
 // ───────────────────────────────────────────────────────────────
-// Named exports (for useMockApi hook and direct imports)
+// Named exports (for useApi hook and direct imports)
 // ───────────────────────────────────────────────────────────────
 
-export function useMockApi<T>(fetcher: () => Promise<T>) {
+export function useApi<T>(fetcher: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -805,4 +805,35 @@ export {
   getMessages,
   sendMessage,
   getNotifications,
-  markNotificationR
+  markNotificationR  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification,
+  getTimetable,
+  getHomework,
+  getSubmissions,
+  submitHomework,
+  getMarks,
+  saveMarks,
+  getResults,
+  getQAItems,
+  askQuestion,
+  answerQuestion,
+  getReportRequests,
+  createReportRequest,
+  getChildren,
+  getChildById,
+  getChildAttendance,
+  getChildHomework,
+  getChildResults,
+  getChildMarks,
+  getParentStats,
+  getTodayClasses,
+  getTeacherStats,
+  getCurrentUser,
+  getStudentStats,
+  getConsumerAdvertisements,
+  trackAdClick,
+  getUserSettings,
+  updateUserSettings,
+};

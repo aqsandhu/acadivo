@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useMockApi, getStudents, createStudent, updateStudent, deleteStudent, type Student } from "@/services/apiClient";
+import { useApi, getStudents, createStudent, updateStudent, deleteStudent, type Student } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -28,7 +28,7 @@ export default function AdminStudentsPage() {
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [form, setForm] = useState<Partial<Student>>({});
 
-  const { data: students, loading, refetch } = useMockApi(() =>
+  const { data: students, loading, refetch } = useApi(() =>
     getStudents({ search: search || undefined, class: classFilter || undefined, section: sectionFilter || undefined })
   );
 

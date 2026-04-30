@@ -11,7 +11,7 @@ import { Select, SelectOption } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMockApi, getAttendance, getStudents, type AttendanceRecord } from "@/services/apiClient";
+import { useApi, getAttendance, getStudents, type AttendanceRecord } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -23,7 +23,7 @@ export default function AdminAttendancePage() {
   const [sectionFilter, setSectionFilter] = useState("");
   const [attendanceMap, setAttendanceMap] = useState<Record<string, "PRESENT" | "ABSENT" | "LATE">({});
 
-  const { data: students, loading: studentsLoading } = useMockApi(() =>
+  const { data: students, loading: studentsLoading } = useApi(() =>
     getStudents({ class: classFilter || undefined, section: sectionFilter || undefined })
   );
 

@@ -6,16 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useMockApi, getStudents, getTeachers, getAttendance } from "@/services/apiClient";
+import { useApi, getStudents, getTeachers, getAttendance } from "@/services/apiClient";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
 
 export default function PrincipalReportsPage() {
   const { t } = useTranslation();
-  const { data: students } = useMockApi(getStudents);
-  const { data: teachers } = useMockApi(getTeachers);
-  const { data: attendance } = useMockApi(getAttendance);
+  const { data: students } = useApi(getStudents);
+  const { data: teachers } = useApi(getTeachers);
+  const { data: attendance } = useApi(getAttendance);
 
   const enrollmentByClass = students
     ? Object.entries(students.reduce((acc, s) => { acc[s.class] = (acc[s.class] || 0) + 1; return acc; }, {} as Record<string, number>))
