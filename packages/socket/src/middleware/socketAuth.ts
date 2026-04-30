@@ -22,7 +22,7 @@ interface JwtPayload {
   exp?: number;
 }
 
-const VALID_ROLES = ["ADMIN", "PRINCIPAL", "TEACHER", "STUDENT", "PARENT"];
+const VALID_ROLES = ["SUPER_ADMIN", "ADMIN", "PRINCIPAL", "TEACHER", "STUDENT", "PARENT"];
 
 export function socketAuthMiddleware(
   socket: Socket,
@@ -38,7 +38,7 @@ export function socketAuthMiddleware(
       return next(new Error("Authentication error: No token provided"));
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload;
 
     // Validate role
     if (!VALID_ROLES.includes(decoded.role)) {
@@ -61,6 +61,4 @@ export function socketAuthMiddleware(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid token";
     logger.warn(`Authentication failed for socket ${socket.id}: ${message}`);
-    next(new Error(`Authentication error: ${message}`));
-  }
-}
+    next(new Error(`Authentication error: ${mess

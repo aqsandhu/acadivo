@@ -22,11 +22,13 @@ import communicationRoutes from "./modules/communication/communication.routes";
 import advertisementRoutes from "./modules/advertisement/advertisement.routes";
 import uploadRoutes from "./modules/upload/upload.routes";
 import qaRoutes from "./modules/qa/qa.routes";
+import { getPreferences, updatePreferences } from "./modules/user/user.preferences.controller";
 
 // Middleware
 import { globalErrorHandler } from "./middleware/errorHandler";
 import { generalLimiter, authLimiter, uploadLimiter, writeLimiter } from "./middleware/rateLimiter";
 import { authMiddleware } from "./middleware/auth";
+import { tenantGuard } from "./middleware/tenantGuard";
 import { verifyToken } from "./utils/jwt";
 
 // Services
@@ -121,19 +123,23 @@ app.get("/", (_req, res) => {
 
 // ── API Routes with targeted rate limiting ──
 app.use(`${API_V1}/auth`, authLimiter, authRoutes);
-app.use(`${API_V1}/teacher`, authMiddleware, teacherRoutes);
-app.use(`${API_V1}/student`, authMiddleware, studentRoutes);
-app.use(`${API_V1}/parent`, authMiddleware, parentRoutes);
-app.use(`${API_V1}/principal`, authMiddleware, principalRoutes);
-app.use(`${API_V1}/school-admin`, authMiddleware, writeLimiter, schoolAdminRoutes);
-app.use(`${API_V1}/super-admin`, authMiddleware, writeLimiter, superAdminRoutes);
-app.use(`${API_V1}/fee`, authMiddleware, feeRoutes);
-app.use(`${API_V1}/result`, authMiddleware, resultRoutes);
-app.use(`${API_V1}/report`, authMiddleware, reportRoutes);
-app.use(`${API_V1}/communication`, authMiddleware, communicationRoutes);
-app.use(`${API_V1}/advertisement`, authMiddleware, advertisementRoutes);
-app.use(`${API_V1}/upload`, authMiddleware, uploadLimiter, uploadRoutes);
-app.use(`${API_V1}/qa`, authMiddleware, qaRoutes);
+app.use(`${API_V1}/teacher`, authMiddleware, tenantGuard(), teacherRoutes);
+app.use(`${API_V1}/student`, authMiddleware, tenantGuard(), studentRoutes);
+app.use(`${API_V1}/parent`, authMiddleware, tenantGuard(), parentRoutes);
+app.use(`${API_V1}/principal`, authMiddleware, tenantGuard(), principalRoutes);
+app.use(`${API_V1}/school-admin`, authMiddleware, tenantGuard(), writeLimiter, schoolAdminRoutes);
+app.use(`${API_V1}/super-admin`, authMiddleware, tenantGuard(), writeLimiter, superAdminRoutes);
+app.use(`${API_V1}/fee`, authMiddleware, tenantGuard(), feeRoutes);
+app.use(`${API_V1}/result`, authMiddleware, tenantGuard(), resultRoutes);
+app.use(`${API_V1}/report`, authMiddleware, tenantGuard(), reportRoutes);
+app.use(`${API_V1}/communication`, authMiddleware, tenantGuard(), communicationRoutes);
+app.use(`${API_V1}/advertisement`, authMiddleware, tenantGuard(), advertisementRoutes);
+app.use(`${API_V1}/upload`, authMiddleware, tenantGuard(), uploadLimiter, uploadRoutes);
+app.use(`${API_V1}/qa`, authMiddleware, tenantGuard(), qaRoutes);
+
+// ── User Preferences ──
+app.get(`${API_V1}/user/preferences`, authMiddleware, tenantGuard(), getPreferences);
+app.put(`${API_V1}/user/preferences`, authMiddleware, tenantGuard(), updatePreferences);
 
 // ── 404 Fallback ──
 app.use((_req, res) => {

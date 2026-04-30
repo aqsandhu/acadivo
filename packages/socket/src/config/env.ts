@@ -28,7 +28,7 @@ export const env = {
   REDIS_URL: getEnvVar("REDIS_URL", "redis://localhost:6379"),
 
   // JWT
-  JWT_SECRET: getEnvVar("JWT_SECRET", "acadivo-dev-secret-key"),
+  JWT_ACCESS_SECRET: getEnvVar("JWT_ACCESS_SECRET", "acadivo-dev-secret-key"),
 
   // Main API
   API_BASE_URL: getEnvVar("API_BASE_URL", "http://localhost:4000"),

@@ -1,4 +1,21 @@
 import { PrismaClient } from '@prisma/client';
+import { AsyncLocalStorage } from 'async_hooks';
+
+// ────────────────────────────────────────────────
+// Tenant Context via AsyncLocalStorage
+// ────────────────────────────────────────────────
+// Replaces the unsafe global variable with request-safe
+// async context. Each request gets its own isolated tenantId.
+
+const tenantStorage = new AsyncLocalStorage<string | null>();
+
+export function setTenantContext(tenantId: string | null) {
+  tenantStorage.enterWith(tenantId);
+}
+
+export function getTenantContext(): string | null {
+  return tenantStorage.getStore();
+}
 
 // ────────────────────────────────────────────────
 // Prisma Client Singleton with Connection Pooling
@@ -73,26 +90,18 @@ prisma.$use(async (params, next) => {
 // Enforces row-level tenant isolation by injecting tenantId
 // from async context into every query.
 
-let currentTenantId: string | null = null;
-
-export function setTenantContext(tenantId: string | null) {
-  currentTenantId = tenantId;
-}
-
-export function getTenantContext(): string | null {
-  return currentTenantId;
-}
-
 prisma.$use(async (params, next) => {
   // Skip tenant check for super-admin operations or raw queries
-  if (params.model === 'SubscriptionPlan' || params.model === 'Advertisement') {
+  if (params.model === 'SubscriptionPlan') {
     return next(params);
   }
 
+  const tenantId = getTenantContext();
+
   // Inject tenantId from context if available
-  if (currentTenantId && params.args?.where) {
+  if (tenantId && params.args?.where) {
     if (typeof params.args.where === 'object' && !params.args.where.tenantId) {
-      params.args.where.tenantId = currentTenantId;
+      params.args.where.tenantId = tenantId;
     }
   }
 
