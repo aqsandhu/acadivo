@@ -607,7 +607,7 @@ export async function updateProfile(userId: string, dto: UpdateProfileDTO) {
 }
 
 // ────────────────────────────────────────────────
-// Setup Parent Password
+// Setup Parent Password (OTP-based)
 // ────────────────────────────────────────────────
 
 export async function setupParentPassword(dto: SetupParentPasswordDTO) {
@@ -626,6 +626,52 @@ export async function setupParentPassword(dto: SetupParentPasswordDTO) {
   });
 
   return { message: "Parent password set successfully. You can now log in." };
+}
+
+// ────────────────────────────────────────────────
+// Initiate Parent Password Setup (generate OTP)
+// ────────────────────────────────────────────────
+
+export async function initiateParentPasswordSetup(parentId: string) {
+  const parent = await prisma.parent.findUnique({
+    where: { userId: parentId },
+    include: { user: true },
+  });
+  if (!parent) throw ApiError.notFound("Parent not found", "PARENT_NOT_FOUND");
+
+  const { createAndStoreOTP } = await import("../../utils/otp");
+  const { sendOTPSMS } = await import("../../utils/sms");
+
+  const otp = await createAndStoreOTP(parent.user.phone);
+  await sendOTPSMS(parent.user.phone, otp);
+
+  logger.info(`[ParentOTP] OTP sent to parent ${parentId}`);
+  return { message: "OTP sent to parent's registered phone number." };
+}
+
+// ────────────────────────────────────────────────
+// Verify Parent OTP and Set Password
+// ────────────────────────────────────────────────
+
+export async function verifyParentOTPAndSetPassword(parentId: string, otp: string, newPassword: string) {
+  const parent = await prisma.parent.findUnique({
+    where: { userId: parentId },
+    include: { user: true },
+  });
+  if (!parent) throw ApiError.notFound("Parent not found", "PARENT_NOT_FOUND");
+
+  const { verifyOTP: verifyStoredOTP } = await import("../../utils/otp");
+  const valid = await verifyStoredOTP(parent.user.phone, otp);
+  if (!valid) throw ApiError.badRequest("Invalid or expired OTP", "INVALID_OTP");
+
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.user.update({
+    where: { id: parentId },
+    data: { passwordHash, isVerified: true, passwordChangedAt: new Date() },
+  });
+
+  logger.info(`[ParentOTP] Password set for parent ${parentId}`);
+  return { message: "Password set successfully. You can now log in." };
 }
 
 // ────────────────────────────────────────────────

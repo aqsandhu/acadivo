@@ -13,4 +13,6 @@ router.post("/requests", validateBody(validator.createRequestValidator), control
 router.get("/requests/:id", controller.getRequest);
 router.put("/requests/:id/status", authorize(["TEACHER", "PRINCIPAL", "ADMIN"]), validateBody(validator.updateStatusValidator), controller.updateRequestStatus);
 
+router.post("/requests/:id/generate-pdf", authorize(["TEACHER", "PRINCIPAL", "ADMIN"]), controller.generateProgressReportPDF);
+
 export default router;

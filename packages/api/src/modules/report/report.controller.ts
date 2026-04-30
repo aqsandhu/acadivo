@@ -79,3 +79,8 @@ export const createReportTemplate = asyncHandler(async (req: AuthRequest, res: R
   const result = await reportService.createReportTemplate(tenantId, req.body);
   return ApiResponse.success(res, result, "Report template created", 201);
 });
+
+export const generateProgressReportPDF = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const result = await reportService.generateProgressReport(req.params.id);
+  return ApiResponse.success(res, result, "Progress report generated and uploaded");
+});

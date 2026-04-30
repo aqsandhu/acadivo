@@ -80,6 +80,16 @@ export const disable2FAValidator = z.object({
   code: z.string().length(6),
 });
 
+export const parentIdValidator = z.object({
+  parentId: z.string().uuid(),
+});
+
+export const verifyParentOTPValidator = z.object({
+  parentId: z.string().uuid(),
+  otp: z.string().length(6).regex(/^[0-9]+$/),
+  newPassword: passwordSchema,
+});
+
 export const updateProfileValidator = z.object({
   firstName: z.string().min(2).max(100).optional(),
   lastName: z.string().min(2).max(100).optional(),

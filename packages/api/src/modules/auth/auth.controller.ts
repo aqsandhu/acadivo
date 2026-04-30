@@ -7,6 +7,7 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { successResponse } from "../../utils/ApiResponse";
 import * as authService from "./auth.service";
+import * as twoFAService from "./2fa.service";
 
 // Simple audit logger
 function auditLog(event: string, userId: string | undefined, details: Record<string, any> = {}) {
@@ -128,5 +129,17 @@ export const updateMe = asyncHandler(async (req: Request, res: Response) => {
 
 export const setupParentPassword = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.setupParentPassword(req.body);
+  res.status(200).json(successResponse(result, result.message));
+});
+
+export const initiateParentPasswordSetup = asyncHandler(async (req: Request, res: Response) => {
+  const { parentId } = req.body;
+  const result = await authService.initiateParentPasswordSetup(parentId);
+  res.status(200).json(successResponse(result, result.message));
+});
+
+export const verifyParentOTPAndSetPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { parentId, otp, newPassword } = req.body;
+  const result = await authService.verifyParentOTPAndSetPassword(parentId, otp, newPassword);
   res.status(200).json(successResponse(result, result.message));
 });
