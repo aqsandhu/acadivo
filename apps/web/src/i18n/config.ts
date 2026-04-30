@@ -13,6 +13,14 @@ export const supportedLanguages = [
 
 export const defaultLanguage = "en";
 
+function setDocumentDirection(lng: string) {
+  if (typeof document !== "undefined") {
+    const lang = supportedLanguages.find((l) => l.code === lng);
+    document.documentElement.dir = lang?.dir || "ltr";
+    document.documentElement.lang = lng;
+  }
+}
+
 i18n
   .use(Backend)
   .use(LanguageDetector)
@@ -36,5 +44,9 @@ i18n
       useSuspense: false,
     },
   });
+
+// Set RTL/LTR on initial load and when language changes
+setDocumentDirection(i18n.language || defaultLanguage);
+i18n.on("languageChanged", setDocumentDirection);
 
 export default i18n;

@@ -101,6 +101,29 @@ async function updateProfile(data: Partial<User> & { avatar?: File }): Promise<A
   return res.data;
 }
 
+/* ── Consumer Advertisements ── */
+
+async function getConsumerAdvertisements(): Promise<Advertisement[]> {
+  const res = await api.get<ApiResponse<Advertisement[]>>("/v1/advertisement/consumer");
+  return res.data.data || [];
+}
+
+async function trackAdClick(adId: string): Promise<void> {
+  await api.post<ApiResponse<void>>(`/v1/advertisement/consumer/${adId}/click`, {});
+}
+
+/* ── Settings ── */
+
+async function getUserSettings(): Promise<Record<string, any>> {
+  const res = await api.get<ApiResponse<Record<string, any>>>("/auth/settings");
+  return res.data.data || {};
+}
+
+async function updateUserSettings(data: Record<string, any>): Promise<Record<string, any>> {
+  const res = await api.put<ApiResponse<Record<string, any>>>("/auth/settings", data);
+  return res.data.data || {};
+}
+
 /* ── Super Admin ── */
 
 async function getDashboardStats(): Promise<DashboardStats> {
@@ -565,6 +588,14 @@ export const mockApi = {
   changePassword,
   updateProfile,
 
+  // Consumer Ads
+  getConsumerAdvertisements,
+  trackAdClick,
+
+  // Settings
+  getUserSettings,
+  updateUserSettings,
+
   // Super Admin
   getDashboardStats,
   getSchools,
@@ -672,6 +703,14 @@ export const mockApi = {
   getChildMarks,
   getParentStats,
 
+  // Consumer Ads
+  getConsumerAdvertisements,
+  trackAdClick,
+
+  // Settings
+  getUserSettings,
+  updateUserSettings,
+
   // Teacher specific
   getTodayClasses,
   getTeacherStats,
@@ -766,56 +805,4 @@ export {
   getMessages,
   sendMessage,
   getNotifications,
-  markNotificationRead,
-  markAllNotificationsRead,
-  deleteNotification,
-  getTimetable,
-  getHomework,
-  getSubmissions,
-  submitHomework,
-  getMarks,
-  saveMarks,
-  getResults,
-  getQAItems,
-  askQuestion,
-  answerQuestion,
-  getReportRequests,
-  createReportRequest,
-  getChildren,
-  getChildById,
-  getChildAttendance,
-  getChildHomework,
-  getChildResults,
-  getChildMarks,
-  getParentStats,
-  getTodayClasses,
-  getTeacherStats,
-  getCurrentUser,
-  getStudentStats,
-};
-
-// Type re-exports for convenience
-export type {
-  School,
-  Teacher,
-  Student,
-  Parent,
-  Class,
-  Section,
-  Subject,
-  Attendance,
-  Homework,
-  HomeworkSubmission,
-  Mark,
-  Result,
-  TimetableEntry,
-  Message,
-  Notification,
-  Announcement,
-  FeeStructure,
-  FeeRecord,
-  ReportRequest,
-  Advertisement,
-  Conversation,
-  DashboardStats,
-};
+  markNotificationR

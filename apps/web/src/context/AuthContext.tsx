@@ -10,7 +10,13 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import type { User, LoginCredentials, AuthTokens } from "@/types";
-import { mockApi } from "@/services/apiClient";
+import {
+  login as apiLogin,
+  logout as apiLogout,
+  getMe,
+  refreshToken as apiRefreshToken,
+  updateProfile as apiUpdateProfile,
+} from "@/services/apiClient";
 
 interface AuthContextType {
   user: User | null;
@@ -59,34 +65,60 @@ function clearStoredAuth() {
   localStorage.removeItem(STORAGE_KEYS.tokens);
 }
 
+/**
+ * Check if a token expiry timestamp is expired.
+ * Handles both seconds and milliseconds formats safely.
+ */
+function isTokenExpired(expiresAt: number): boolean {
+  const nowMs = Date.now();
+  // If expiresAt > 1_000_000_000_000 it's in ms (year 33658 in seconds, but 2001 in ms)
+  if (expiresAt > 1_000_000_000_000) {
+    return expiresAt <= nowMs;
+  }
+  // Otherwise assume seconds
+  return expiresAt <= nowMs / 1000;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { i18n } = useTranslation();
-  const [user, setUser] = useState<User | null>(getStoredUser);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAuthenticated = !!user;
+  // Derived auth state: user must exist AND token must not be expired
+  const isAuthenticated = useMemo(() => {
+    if (!user) return false;
+    const tokens = getStoredTokens();
+    if (!tokens) return false;
+    return !isTokenExpired(tokens.expiresAt);
+  }, [user]);
 
   // Restore session on mount
   useEffect(() => {
     const init = async () => {
       const tokens = getStoredTokens();
-      if (tokens && tokens.expiresAt > Date.now()) {
+      const storedUser = getStoredUser();
+
+      if (tokens && storedUser && !isTokenExpired(tokens.expiresAt)) {
         try {
-          const res = await mockApi.getMe();
+          const res = await getMe();
           if (res.success && res.data) {
             setUser(res.data);
+            localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(res.data));
             if (res.data.preferredLanguage) {
               i18n.changeLanguage(res.data.preferredLanguage);
             }
           } else {
             clearStoredAuth();
+            setUser(null);
           }
         } catch {
           clearStoredAuth();
+          setUser(null);
         }
-      } else if (tokens) {
-        // Token expired
+      } else {
+        // No valid token or expired
         clearStoredAuth();
+        setUser(null);
       }
       setIsLoading(false);
     };
@@ -108,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (credentials: LoginCredentials) => {
       setIsLoading(true);
       try {
-        const res = await mockApi.login(credentials);
+        const res = await apiLogin(credentials);
         if (!res.success || !res.data) {
           throw new Error(res.error || "Login failed");
         }
@@ -125,30 +157,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     clearStoredAuth();
     setUser(null);
-    mockApi.logout();
+    // Best-effort server-side logout
+    apiLogout().catch(() => {
+      /* ignore network errors on logout */
+    });
   }, []);
 
   const updateProfile = useCallback(
     async (data: Partial<User>) => {
       setIsLoading(true);
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        const updated = { ...user!, ...data, updatedAt: new Date().toISOString() };
-        setUser(updated);
-        localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(updated));
+        const res = await apiUpdateProfile(data);
+        if (res.success && res.data) {
+          setUser(res.data);
+          localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(res.data));
+        } else {
+          throw new Error(res.error || "Profile update failed");
+        }
       } finally {
         setIsLoading(false);
       }
     },
-    [user]
+    []
   );
 
   const refreshToken = useCallback(async () => {
     const tokens = getStoredTokens();
     if (!tokens) return;
     try {
-      const res = await mockApi.refreshToken(tokens.refreshToken);
+      const res = await apiRefreshToken(tokens.refreshToken);
       if (res.success && res.data) {
         localStorage.setItem(STORAGE_KEYS.tokens, JSON.stringify(res.data));
       } else {
@@ -165,7 +202,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const tokens = getStoredTokens();
     if (!tokens) return;
 
-    const refreshIn = tokens.expiresAt - Date.now() - 60000; // refresh 1 min before expiry
+    const expiresAt = tokens.expiresAt;
+    const nowMs = Date.now();
+    const expiryMs =
+      expiresAt > 1_000_000_000_000 ? expiresAt : expiresAt * 1000;
+    const refreshIn = expiryMs - nowMs - 60000; // refresh 1 min before expiry
+
     if (refreshIn <= 0) {
       refreshToken();
       return;

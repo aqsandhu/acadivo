@@ -429,3 +429,131 @@ export interface ParentSetupData {
   password: string;
   confirmPassword: string;
 }
+
+
+export interface Conversation {
+  id: string;
+  participantIds?: string[];
+  participantId?: string;
+  participants?: User[];
+  participantName: string;
+  participantRole?: string;
+  lastMessage?: string;
+  lastMessageTime?: string;
+  unreadCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MessageItem {
+  id: string;
+  conversationId?: string;
+  senderId: string;
+  sender?: User;
+  content: string;
+  attachmentUrl?: string;
+  isRead?: boolean;
+  read?: boolean;
+  readAt?: string;
+  createdAt?: string;
+  timestamp?: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  body: string;
+  type: "info" | "success" | "warning" | "error";
+  category: string;
+  isRead: boolean;
+  actionUrl?: string;
+  createdAt: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  date: string;
+  status: "present" | "absent" | "late" | "leave";
+  remarks?: string;
+}
+
+export interface TimetableSlot {
+  id: string;
+  dayOfWeek: number;
+  period: number;
+  startTime: string;
+  endTime: string;
+  subject: string;
+  teacher: string;
+  roomNumber?: string;
+}
+
+export interface ResultItem {
+  id: string;
+  examType: string;
+  totalMarks: number;
+  obtainedMarks: number;
+  percentage: number;
+  grade: string;
+  status: string;
+  subjectResults: {
+    subject: string;
+    totalMarks: number;
+    obtainedMarks: number;
+    grade: string;
+  }[];
+}
+
+export interface HomeworkItem {
+  id: string;
+  title: string;
+  description?: string;
+  subject: string;
+  dueDate: string;
+  status: "pending" | "submitted" | "graded" | "late";
+  marks?: number;
+  feedback?: string;
+  attachmentUrl?: string;
+}
+
+export interface ChildProfile {
+  id: string;
+  name: string;
+  rollNumber: string;
+  className: string;
+  sectionName: string;
+  attendance: number;
+  currentMarks: number;
+}
+
+export interface QAItem {
+  id: string;
+  question: string;
+  askedBy: string;
+  askedAt: string;
+  answer?: string;
+  answeredBy?: string;
+  answeredAt?: string;
+  isPublic: boolean;
+  status: "pending" | "answered" | "rejected";
+}
+
+export interface MarkEntry {
+  studentId: string;
+  studentName: string;
+  rollNumber: string;
+  obtainedMarks: number;
+  totalMarks: number;
+  percentage?: number;
+  grade?: string;
+  remarks?: string;
+}
+
+export interface ClassItem {
+  id: string;
+  name: string;
+  level: number;
+  sectionCount: number;
+  studentCount: number;
+  classTeacherName?: string;
+}

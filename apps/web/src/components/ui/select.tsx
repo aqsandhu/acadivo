@@ -1,13 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
+interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "onChange"> {
+  onValueChange?: (value: string) => void;
+}
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, children, ...props }, ref) => (
+  ({ className, children, onValueChange, onChange, ...props }, ref) => (
     <div className="relative">
       <select
         ref={ref}
@@ -15,6 +17,14 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           "flex h-10 w-full appearance-none rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
+        onChange={(e) => {
+          if (onValueChange) {
+            onValueChange(e.target.value);
+          }
+          if (onChange) {
+            onChange(e);
+          }
+        }}
         {...props}
       >
         {children}
@@ -30,4 +40,7 @@ const SelectOption = React.forwardRef<HTMLOptionElement, React.OptionHTMLAttribu
 );
 SelectOption.displayName = "SelectOption";
 
-export { Select, SelectOption };
+// Alias for components that import SelectItem
+const SelectItem = SelectOption;
+
+export { Select, SelectOption, SelectItem };
