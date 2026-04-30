@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Search, GraduationCap, Plus, Edit, Trash2, Upload, Download, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,28 +21,77 @@ import { useApi, getTeachers, createTeacher, updateTeacher, deleteTeacher, type 
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
+const teacherSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email"),
+  phone: z.string().optional(),
+  qualifications: z.string().optional(),
+  subjects: z.string().optional(),
+  assignedClasses: z.string().optional(),
+});
+
+type TeacherFormData = z.infer<typeof teacherSchema>;
+
 export default function AdminTeachersPage() {
   const { t } = useTranslation();
   const { toasts, addToast, removeToast } = useToast();
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editTeacher, setEditTeacher] = useState<Teacher | null>(null);
-  const [form, setForm] = useState<Partial<Teacher>>({});
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+    setValue,
+  } = useForm<TeacherFormData>({
+    resolver: zodResolver(teacherSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      qualifications: "",
+      subjects: "",
+      assignedClasses: "",
+    },
+  });
 
   const { data: teachers, loading, refetch } = useApi(() => getTeachers({ search: search || undefined }));
 
-  const handleSave = async () => {
+  const openModal = (teacher?: Teacher) => {
+    if (teacher) {
+      setEditTeacher(teacher);
+      setValue("name", (teacher as any).name || "");
+      setValue("email", (teacher as any).email || "");
+      setValue("phone", (teacher as any).phone || "");
+      setValue("qualifications", (teacher as any).qualifications || "");
+      setValue("subjects", (teacher as any).subjects?.join(", ") || "");
+      setValue("assignedClasses", (teacher as any).assignedClasses?.join(", ") || "");
+    } else {
+      setEditTeacher(null);
+      reset();
+    }
+    setModalOpen(true);
+  };
+
+  const handleSave = async (data: TeacherFormData) => {
+    const payload = {
+      ...data,
+      subjects: data.subjects ? data.subjects.split(",").map((s) => s.trim()) : [],
+      assignedClasses: data.assignedClasses ? data.assignedClasses.split(",").map((s) => s.trim()) : [],
+    };
     try {
       if (editTeacher) {
-        await updateTeacher(editTeacher.id, form);
+        await updateTeacher(editTeacher.id, payload as Partial<Teacher>);
         addToast({ title: "Success", description: "Teacher updated", variant: "success" });
       } else {
-        await createTeacher(form);
+        await createTeacher(payload as Partial<Teacher>);
         addToast({ title: "Success", description: "Teacher added", variant: "success" });
       }
       setModalOpen(false);
       setEditTeacher(null);
-      setForm({});
+      reset();
       refetch();
     } catch {
       addToast({ title: "Error", description: "Failed to save", variant: "destructive" });
@@ -58,7 +110,7 @@ export default function AdminTeachersPage() {
 
   const handleToggleStatus = async (teacher: Teacher) => {
     try {
-      await updateTeacher(teacher.id, { status: teacher.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" });
+      await updateTeacher(teacher.id, { status: (teacher as any).status === "ACTIVE" ? "INACTIVE" : "ACTIVE" });
       addToast({ title: "Success", description: "Status updated", variant: "success" });
       refetch();
     } catch {
@@ -74,7 +126,7 @@ export default function AdminTeachersPage() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" />{t("common.bulkImport")}</Button>
           <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" />{t("common.export")}</Button>
-          <Button size="sm" onClick={() => { setForm({}); setModalOpen(true); }}><Plus className="mr-2 h-4 w-4" />{t("common.add")}</Button>
+          <Button size="sm" onClick={() => openModal()}><Plus className="mr-2 h-4 w-4" />{t("common.add")}</Button>
         </div>
       </div>
 
@@ -103,17 +155,17 @@ export default function AdminTeachersPage() {
                   {teachers.map((teacher) => (
                     <TableRow key={teacher.id}>
                       <TableCell className="font-medium">{teacher.uniqueId}</TableCell>
-                      <TableCell>{teacher.name}</TableCell>
-                      <TableCell>{teacher.email}</TableCell>
-                      <TableCell>{teacher.phone}</TableCell>
-                      <TableCell>{teacher.qualifications}</TableCell>
-                      <TableCell>{teacher.subjects.join(", ")}</TableCell>
-                      <TableCell>{teacher.assignedClasses.join(", ")}</TableCell>
-                      <TableCell><Badge variant={teacher.status === "ACTIVE" ? "default" : "secondary"}>{teacher.status}</Badge></TableCell>
+                      <TableCell>{(teacher as any).name}</TableCell>
+                      <TableCell>{(teacher as any).email}</TableCell>
+                      <TableCell>{(teacher as any).phone}</TableCell>
+                      <TableCell>{(teacher as any).qualifications}</TableCell>
+                      <TableCell>{(teacher as any).subjects?.join(", ")}</TableCell>
+                      <TableCell>{(teacher as any).assignedClasses?.join(", ")}</TableCell>
+                      <TableCell><Badge variant={(teacher as any).status === "ACTIVE" ? "default" : "secondary"}>{(teacher as any).status}</Badge></TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(teacher)}><Eye className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setEditTeacher(teacher); setForm(teacher); setModalOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => openModal(teacher)}><Edit className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleDelete(teacher.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
                       </TableCell>
@@ -126,18 +178,41 @@ export default function AdminTeachersPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={modalOpen} onOpenChange={(open) => { if (!open) { setModalOpen(false); setEditTeacher(null); setForm({}); } }}>
+      <Dialog open={modalOpen} onOpenChange={(open) => { if (!open) { setModalOpen(false); setEditTeacher(null); reset(); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editTeacher ? "Edit Teacher" : "Add Teacher"}</DialogTitle><DialogDescription>Fill teacher details.</DialogDescription></DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2"><Label>Name</Label><Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div className="grid gap-2"><Label>Email</Label><Input type="email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div className="grid gap-2"><Label>Phone</Label><Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-            <div className="grid gap-2"><Label>Qualifications</Label><Input value={form.qualifications || ""} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} /></div>
-            <div className="grid gap-2"><Label>Subjects (comma separated)</Label><Input value={form.subjects?.join(", ") || ""} onChange={(e) => setForm({ ...form, subjects: e.target.value.split(",").map((s) => s.trim()) })} /></div>
-            <div className="grid gap-2"><Label>Assigned Classes (comma separated)</Label><Input value={form.assignedClasses?.join(", ") || ""} onChange={(e) => setForm({ ...form, assignedClasses: e.target.value.split(",").map((s) => s.trim()) })} /></div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => { setModalOpen(false); setEditTeacher(null); setForm({}); }}>{t("common.cancel")}</Button><Button onClick={handleSave}>{t("common.save")}</Button></DialogFooter>
+          <form onSubmit={handleSubmit(handleSave)} className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Name</Label>
+              <Input {...register("name")} />
+              {errors.name && <p className="text-xs text-danger-500">{errors.name.message}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label>Email</Label>
+              <Input type="email" {...register("email")} />
+              {errors.email && <p className="text-xs text-danger-500">{errors.email.message}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label>Phone</Label>
+              <Input {...register("phone")} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Qualifications</Label>
+              <Input {...register("qualifications")} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Subjects (comma separated)</Label>
+              <Input {...register("subjects")} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Assigned Classes (comma separated)</Label>
+              <Input {...register("assignedClasses")} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setModalOpen(false); setEditTeacher(null); reset(); }}>{t("common.cancel")}</Button>
+              <Button type="submit">{t("common.save")}</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

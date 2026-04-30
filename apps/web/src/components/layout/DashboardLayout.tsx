@@ -27,6 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DarkModeToggle } from "./DarkModeToggle";
 
 type Role = "super-admin" | "principal" | "admin";
 
@@ -175,6 +176,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <h1 className="text-lg font-semibold capitalize">
             {t(navItems.find((n) => pathname?.startsWith(n.href))?.label || "nav.dashboard")}
           </h1>
+          <div className="flex-1" />
+          <DarkModeToggle />
         </header>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
       </div>

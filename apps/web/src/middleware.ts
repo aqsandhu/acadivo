@@ -39,12 +39,21 @@ export function middleware(request: NextRequest) {
         parent: "/parent",
       };
 
-      // Check if user is accessing their allowed routes
       const allowedPrefix = roleRouteMap[role];
+
+      // Redirect generic dashboard to role-specific dashboard
+      if (pathname === "/dashboard" || pathname === "/dashboard/") {
+        if (allowedPrefix) {
+          return NextResponse.redirect(new URL(allowedPrefix, request.url));
+        }
+      }
+
+      // Check if user is accessing their allowed routes
       if (
         allowedPrefix &&
         !pathname.startsWith(allowedPrefix) &&
-        !pathname.startsWith("/api")
+        !pathname.startsWith("/api") &&
+        !pathname.startsWith("/dashboard/profile")
       ) {
         return NextResponse.redirect(new URL(allowedPrefix, request.url));
       }
