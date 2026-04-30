@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { createReportRequest, getChildren, getReportRequests } from "@/services/apiClient";
 import type { ReportRequest, ChildProfile } from "@/types";
 import { FileBadge, Download } from "lucide-react";
 
@@ -19,7 +19,7 @@ export default function ParentReportsPage() {
 
   useEffect(() => {
     async function load() {
-      const [r, c] = await Promise.all([mockApi.getReportRequests(), mockApi.getChildren()]);
+      const [r, c] = await Promise.all([getReportRequests(), getChildren()]);
       setRequests(r);
       setChildren(c);
       setLoading(false);
@@ -31,7 +31,7 @@ export default function ParentReportsPage() {
 
   useEffect(() => {
     async function load() {
-      const [r, c] = await Promise.all([mockApi.getReportRequests(), mockApi.getChildren()]);
+      const [r, c] = await Promise.all([getReportRequests(), getChildren()]);
       setRequests(r);
       setChildren(c);
       // Extract unique teachers from requests instead of hardcoding
@@ -44,7 +44,7 @@ export default function ParentReportsPage() {
   }, []);
 
   const handleRequest = async (data: any) => {
-    await mockApi.createReportRequest(data);
+    await createReportRequest(data);
     alert("Report request submitted!");
   };
 

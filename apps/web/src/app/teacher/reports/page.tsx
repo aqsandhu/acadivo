@@ -10,7 +10,7 @@ import { Select, SelectItem } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getReportRequests } from "@/services/apiClient";
 import type { ReportRequest } from "@/types";
 import { FileBadge, Download, CheckCircle2 } from "lucide-react";
 
@@ -20,7 +20,7 @@ export default function TeacherReportsPage() {
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    mockApi.getReportRequests().then((r) => { setRequests(r); setLoading(false); });
+    getReportRequests().then((r) => { setRequests(r); setLoading(false); });
   }, []);
 
   return (

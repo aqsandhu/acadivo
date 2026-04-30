@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ResultCard } from "@/components/dashboard/ResultCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getResults } from "@/services/apiClient";
 import type { ResultItem } from "@/types";
 import { Download } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -16,7 +16,7 @@ export default function StudentResultsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    mockApi.getResults().then((r) => { setResults(r); setLoading(false); });
+    getResults().then((r) => { setResults(r); setLoading(false); });
   }, []);
 
   const chartData = results.length > 0 ? results[0].subjects.map((s) => ({ subject: s.subject, marks: s.obtainedMarks })) : [];

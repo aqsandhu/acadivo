@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getAttendance, saveAttendance } from "@/services/apiClient";
 import type { AttendanceRecord } from "@/types";
 import { cn } from "@/utils/cn";
 import { CheckCircle2, XCircle, Clock, ArrowRightCircle } from "lucide-react";
@@ -28,7 +28,7 @@ export default function TeacherAttendancePage() {
 
   useEffect(() => {
     setLoading(true);
-    mockApi.getAttendance(className, section).then((r) => { setRecords(r); setLoading(false); });
+    getAttendance(className, section).then((r) => { setRecords(r); setLoading(false); });
   }, [className, section]);
 
   const updateStatus = (id: string, status: AttendanceRecord["status"]) => {
@@ -40,7 +40,7 @@ export default function TeacherAttendancePage() {
   };
 
   const save = async () => {
-    await mockApi.saveAttendance(records);
+    await saveAttendance(records);
     alert("Attendance saved successfully!");
   };
 
@@ -55,14 +55,14 @@ export default function TeacherAttendancePage() {
           <div className="flex flex-wrap gap-4 items-end">
             <div>
               <Label>Class</Label>
-              <Select value={className} onChange={(e) => setClassName(e.target.value)}>
+              <Select value={className} onValueChange={(value) => setClassName(value)}>
                 <SelectItem value="9th">9th</SelectItem>
                 <SelectItem value="10th">10th</SelectItem>
               </Select>
             </div>
             <div>
               <Label>Section</Label>
-              <Select value={section} onChange={(e) => setSection(e.target.value)}>
+              <Select value={section} onValueChange={(value) => setSection(value)}>
                 <SelectItem value="A">A</SelectItem>
                 <SelectItem value="B">B</SelectItem>
                 <SelectItem value="C">C</SelectItem>

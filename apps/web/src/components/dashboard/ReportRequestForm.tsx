@@ -27,19 +27,19 @@ export function ReportRequestForm({ children, teachers, onSubmit }: ReportReques
         </div>
         <div>
           <Label>Select Child</Label>
-          <Select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
+          <Select value={studentId} onValueChange={(value) => setStudentId(value)}>
             {children.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </Select>
         </div>
         <div>
           <Label>Select Teacher</Label>
-          <Select value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
+          <Select value={teacherId} onValueChange={(value) => setTeacherId(value)}>
             {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
           </Select>
         </div>
         <div>
           <Label>Report Type</Label>
-          <Select value={type} onChange={(e) => setType(e.target.value)}>
+          <Select value={type} onValueChange={(value) => setType(value)}>
             <SelectItem value="Progress">Progress</SelectItem>
             <SelectItem value="Attendance">Attendance</SelectItem>
             <SelectItem value="Behavior">Behavior</SelectItem>

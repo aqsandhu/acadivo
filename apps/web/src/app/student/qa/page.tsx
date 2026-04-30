@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { askQuestion, getQAItems } from "@/services/apiClient";
 import type { QAItem } from "@/types";
 import { HelpCircle, Globe, CheckCircle2 } from "lucide-react";
 
@@ -22,11 +22,11 @@ export default function StudentQAPage() {
   const [subject, setSubject] = useState("Mathematics");
 
   useEffect(() => {
-    mockApi.getQAItems().then((q) => { setItems(q); setLoading(false); });
+    getQAItems().then((q) => { setItems(q); setLoading(false); });
   }, []);
 
   const ask = async () => {
-    await mockApi.askQuestion({ question, subject, studentId: user?.id || "", studentName: user?.name || "" });
+    await askQuestion({ question, subject, studentId: user?.id || "", studentName: user?.name || "" });
     alert("Question submitted!");
     setQuestion("");
   };
@@ -42,7 +42,7 @@ export default function StudentQAPage() {
               <h3 className="font-semibold">Ask a New Question</h3>
               <div>
                 <label className="text-sm font-medium">Subject</label>
-                <Select value={subject} onChange={(e) => setSubject(e.target.value)}>
+                <Select value={subject} onValueChange={(value) => setSubject(value)}>
                   <SelectItem value="Mathematics">Mathematics</SelectItem>
                   <SelectItem value="Physics">Physics</SelectItem>
                   <SelectItem value="Chemistry">Chemistry</SelectItem>

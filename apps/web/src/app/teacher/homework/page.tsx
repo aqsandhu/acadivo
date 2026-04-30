@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getHomework, getSubmissions } from "@/services/apiClient";
 import type { HomeworkItem, HomeworkSubmission } from "@/types";
 import { Plus, X, Download } from "lucide-react";
 
@@ -23,12 +23,12 @@ export default function TeacherHomeworkPage() {
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>([]);
 
   useEffect(() => {
-    mockApi.getHomework().then((h) => { setHomework(h); setLoading(false); });
+    getHomework().then((h) => { setHomework(h); setLoading(false); });
   }, []);
 
   const viewSubmissions = async (hw: HomeworkItem) => {
     setSelectedHw(hw);
-    const subs = await mockApi.getSubmissions(hw.id);
+    const subs = await getSubmissions(hw.id);
     setSubmissions(subs);
   };
 

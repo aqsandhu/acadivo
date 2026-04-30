@@ -7,7 +7,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Select, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getMarks } from "@/services/apiClient";
 import type { MarkEntry } from "@/types";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
@@ -17,7 +17,7 @@ export default function StudentMarksPage() {
   const [filter, setFilter] = useState("All");
 
   useEffect(() => {
-    mockApi.getMarks().then((m) => { setMarks(m); setLoading(false); });
+    getMarks().then((m) => { setMarks(m); setLoading(false); });
   }, []);
 
   const filtered = filter === "All" ? marks : marks.filter((m) => m.examType === filter);
@@ -38,7 +38,7 @@ export default function StudentMarksPage() {
           <h1 className="text-2xl font-bold">My Marks</h1>
           <div>
             <Label>Filter by Exam Type</Label>
-            <Select value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <Select value={filter} onValueChange={(value) => setFilter(value)}>
               <SelectItem value="All">All</SelectItem>
               <SelectItem value="Quiz">Quiz</SelectItem>
               <SelectItem value="Midterm">Midterm</SelectItem>

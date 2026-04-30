@@ -8,7 +8,7 @@ import { HomeworkCard } from "@/components/dashboard/HomeworkCard";
 import { TimetableGrid } from "@/components/dashboard/TimetableGrid";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getAnnouncements, getCurrentUser, getHomework, getStudentStats, getTimetable } from "@/services/apiClient";
 import { useTranslation } from "react-i18next";
 import type { HomeworkItem, Announcement, TimetableSlot } from "@/types";
 import { ClipboardCheck, FileText, Bell, Trophy, GraduationCap } from "lucide-react";
@@ -25,11 +25,11 @@ export default function StudentDashboard() {
   useEffect(() => {
     async function load() {
       const [u, s, h, a, t] = await Promise.all([
-        mockApi.getCurrentUser("STUDENT"),
-        mockApi.getStudentStats(),
-        mockApi.getHomework(),
-        mockApi.getAnnouncements(),
-        mockApi.getTimetable("10th", "A"),
+        getCurrentUser("STUDENT"),
+        getStudentStats(),
+        getHomework(),
+        getAnnouncements(),
+        getTimetable("10th", "A"),
       ]);
       setUser(u);
       setStats(s);

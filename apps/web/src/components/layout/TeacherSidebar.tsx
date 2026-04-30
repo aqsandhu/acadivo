@@ -6,7 +6,7 @@ import { cn } from "@/utils/cn";
 import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard, BookOpen, ClipboardList, FileText, BarChart3, HelpCircle,
-  FileBadge, MessageSquare, Calendar, Bell, GraduationCap, LogOut, Menu, X
+  FileBadge, MessageSquare, Calendar, Bell, GraduationCap, LogOut, Menu, X, Megaphone
 } from "lucide-react";
 import { useState } from "react";
 
@@ -21,6 +21,7 @@ const teacherLinks = [
   { href: "/teacher/messages", label: "messages", icon: MessageSquare },
   { href: "/teacher/timetable", label: "timetable", icon: Calendar },
   { href: "/teacher/notifications", label: "notifications", icon: Bell },
+  { href: "/advertisements", label: "advertisements", icon: Megaphone },
 ];
 
 export function TeacherSidebar() {
@@ -68,6 +69,4 @@ export function TeacherSidebar() {
           </Link>
         </div>
       </aside>
-    </>
-  );
-}
+    

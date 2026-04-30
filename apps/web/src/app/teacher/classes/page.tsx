@@ -5,7 +5,7 @@ import { TeacherSidebar } from "@/components/layout/TeacherSidebar";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ClassCard } from "@/components/dashboard/ClassCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getClasses } from "@/services/apiClient";
 import type { ClassItem } from "@/types";
 
 export default function TeacherClassesPage() {
@@ -13,7 +13,7 @@ export default function TeacherClassesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    mockApi.getClasses().then((c) => { setClasses(c); setLoading(false); });
+    getClasses().then((c) => { setClasses(c); setLoading(false); });
   }, []);
 
   return (

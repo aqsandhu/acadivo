@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getHomework, getSubmissions } from "@/services/apiClient";
 import type { HomeworkItem, HomeworkSubmission } from "@/types";
 import { Upload, X, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -22,8 +22,8 @@ export default function StudentHomeworkPage() {
 
   useEffect(() => {
     async function load() {
-      const h = await mockApi.getHomework();
-      const subs = await mockApi.getSubmissions("HW-1");
+      const h = await getHomework();
+      const subs = await getSubmissions("HW-1");
       setHomework(h);
       setSubmissions(subs);
       setLoading(false);

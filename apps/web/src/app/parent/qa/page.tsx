@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { askQuestion, getChildren, getQAItems } from "@/services/apiClient";
 import type { QAItem, ChildProfile } from "@/types";
 import { HelpCircle, MessageCircle } from "lucide-react";
 
@@ -22,7 +22,7 @@ export default function ParentQAPage() {
 
   useEffect(() => {
     async function load() {
-      const [q, c] = await Promise.all([mockApi.getQAItems(), mockApi.getChildren()]);
+      const [q, c] = await Promise.all([getQAItems(), getChildren()]);
       setItems(q);
       setChildren(c);
       if (c.length > 0) setSelectedChild(c[0].id);
@@ -32,7 +32,7 @@ export default function ParentQAPage() {
   }, []);
 
   const ask = async () => {
-    await mockApi.askQuestion({ question, studentId: selectedChild, studentName: children.find((c) => c.id === selectedChild)?.name || "" });
+    await askQuestion({ question, studentId: selectedChild, studentName: children.find((c) => c.id === selectedChild)?.name || "" });
     alert("Question sent to teacher!");
     setQuestion("");
   };
@@ -47,7 +47,7 @@ export default function ParentQAPage() {
             <CardContent className="p-5 space-y-4">
               <div>
                 <Label>Select Child</Label>
-                <Select value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)}>
+                <Select value={selectedChild} onValueChange={(value) => setSelectedChild(value)}>
                   {children.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </Select>
               </div>

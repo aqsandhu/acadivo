@@ -8,7 +8,7 @@ import { MessageThreadList } from "@/components/dashboard/MessageThreadList";
 import { ChatInterface } from "@/components/dashboard/ChatInterface";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getConversations, getMessages, sendMessage } from "@/services/apiClient";
 import type { Conversation, MessageItem } from "@/types";
 import { Plus } from "lucide-react";
 
@@ -20,18 +20,18 @@ export default function StudentMessagesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    mockApi.getConversations().then((c) => { setConversations(c); setLoading(false); });
+    getConversations().then((c) => { setConversations(c); setLoading(false); });
   }, []);
 
   const loadMessages = async (conv: Conversation) => {
     setActiveConv(conv);
-    const msgs = await mockApi.getMessages(conv.id);
+    const msgs = await getMessages(conv.id);
     setMessages(msgs);
   };
 
   const sendMessage = async (content: string) => {
     if (!activeConv) return;
-    const msg = await mockApi.sendMessage({ content, receiverId: activeConv.participantId });
+    const msg = await sendMessage({ content, receiverId: activeConv.participantId });
     setMessages((prev) => [...prev, msg]);
   };
 

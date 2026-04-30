@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getAttendance, getAttendanceSummary, getChildren } from "@/services/apiClient";
 import type { AttendanceRecord, ChildProfile } from "@/types";
 import { AlertTriangle } from "lucide-react";
 
@@ -20,7 +20,7 @@ export default function ParentAttendancePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    mockApi.getChildren().then((c) => {
+    getChildren().then((c) => {
       setChildren(c);
       if (c.length > 0) setSelectedChild(c[0].id);
     });
@@ -29,7 +29,7 @@ export default function ParentAttendancePage() {
   useEffect(() => {
     if (!selectedChild) return;
     setLoading(true);
-    Promise.all([mockApi.getAttendance(), mockApi.getAttendanceSummary(selectedChild)]).then(([r, s]) => {
+    Promise.all([getAttendance(), getAttendanceSummary(selectedChild)]).then(([r, s]) => {
       setRecords(r);
       setSummary(s);
       setLoading(false);
@@ -46,7 +46,7 @@ export default function ParentAttendancePage() {
           <h1 className="text-2xl font-bold">Child Attendance</h1>
           <div>
             <Label>Select Child</Label>
-            <Select value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)}>
+            <Select value={selectedChild} onValueChange={(value) => setSelectedChild(value)}>
               {children.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </Select>
           </div>

@@ -6,7 +6,7 @@ import { cn } from "@/utils/cn";
 import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard, Users, ClipboardList, FileText, BarChart3, CreditCard,
-  FileBadge, HelpCircle, MessageSquare, Bell, LogOut, Menu, X
+  FileBadge, HelpCircle, MessageSquare, Bell, LogOut, Menu, X, Megaphone
 } from "lucide-react";
 import { useState } from "react";
 
@@ -21,6 +21,7 @@ const parentLinks = [
   { href: "/parent/qa", label: "qa", icon: HelpCircle },
   { href: "/parent/messages", label: "messages", icon: MessageSquare },
   { href: "/parent/notifications", label: "notifications", icon: Bell },
+  { href: "/advertisements", label: "advertisements", icon: Megaphone },
 ];
 
 export function ParentSidebar() {
@@ -68,6 +69,4 @@ export function ParentSidebar() {
           </Link>
         </div>
       </aside>
-    </>
-  );
-}
+    

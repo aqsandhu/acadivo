@@ -7,7 +7,7 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ClassCard } from "@/components/dashboard/ClassCard";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getAnnouncements, getCurrentUser, getTeacherStats, getTodayClasses } from "@/services/apiClient";
 import { useTranslation } from "react-i18next";
 import type { ClassItem, Announcement } from "@/types";
 import { BookOpen, ClipboardCheck, MessageSquare, FileBadge, Bell } from "lucide-react";
@@ -23,10 +23,10 @@ export default function TeacherDashboard() {
   useEffect(() => {
     async function load() {
       const [u, s, c, a] = await Promise.all([
-        mockApi.getCurrentUser("TEACHER"),
-        mockApi.getTeacherStats(),
-        mockApi.getTodayClasses(),
-        mockApi.getAnnouncements(),
+        getCurrentUser("TEACHER"),
+        getTeacherStats(),
+        getTodayClasses(),
+        getAnnouncements(),
       ]);
       setUser(u);
       setStats(s);

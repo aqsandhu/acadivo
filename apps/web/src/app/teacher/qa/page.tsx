@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { answerQuestion, getQAItems } from "@/services/apiClient";
 import type { QAItem } from "@/types";
 import { HelpCircle, CheckCircle2, Globe } from "lucide-react";
 
@@ -20,12 +20,12 @@ export default function TeacherQAPage() {
   const [isPublic, setIsPublic] = useState(false);
 
   useEffect(() => {
-    mockApi.getQAItems().then((q) => { setItems(q); setLoading(false); });
+    getQAItems().then((q) => { setItems(q); setLoading(false); });
   }, []);
 
   const submitAnswer = async () => {
     if (!selected) return;
-    await mockApi.answerQuestion(selected.id, answer, isPublic);
+    await answerQuestion(selected.id, answer, isPublic);
     alert("Answer submitted!");
     setSelected(null);
     setAnswer("");

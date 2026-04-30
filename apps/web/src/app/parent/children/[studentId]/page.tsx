@@ -12,7 +12,7 @@ import { FeeRecordCard } from "@/components/dashboard/FeeRecordCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getAttendance, getChildById, getFeeRecords, getHomework, getReportRequests, getResults } from "@/services/apiClient";
 import type { ChildProfile, AttendanceRecord, HomeworkItem, ResultItem, FeeRecord, ReportRequest } from "@/types";
 import { GraduationCap, Hash, TrendingUp, BookOpen, CreditCard } from "lucide-react";
 
@@ -29,12 +29,12 @@ export default function ParentChildDetailPage() {
   useEffect(() => {
     async function load() {
       const [c, a, h, r, f, rep] = await Promise.all([
-        mockApi.getChildById(studentId as string),
-        mockApi.getAttendance(),
-        mockApi.getHomework(),
-        mockApi.getResults(studentId as string),
-        mockApi.getFeeRecords(studentId as string),
-        mockApi.getReportRequests(),
+        getChildById(studentId as string),
+        getAttendance(),
+        getHomework(),
+        getResults(studentId as string),
+        getFeeRecords(studentId as string),
+        getReportRequests(),
       ]);
       setChild(c || null);
       setAttendance(a);

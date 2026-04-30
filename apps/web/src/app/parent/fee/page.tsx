@@ -5,7 +5,7 @@ import { ParentSidebar } from "@/components/layout/ParentSidebar";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FeeRecordCard } from "@/components/dashboard/FeeRecordCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getFeeRecords } from "@/services/apiClient";
 import type { FeeRecord } from "@/types";
 import { CreditCard } from "lucide-react";
 
@@ -14,7 +14,7 @@ export default function ParentFeePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    mockApi.getFeeRecords().then((f) => { setRecords(f); setLoading(false); });
+    getFeeRecords().then((f) => { setRecords(f); setLoading(false); });
   }, []);
 
   const totalDue = records.reduce((sum, r) => sum + r.balance, 0);

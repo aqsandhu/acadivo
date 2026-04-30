@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectItem } from "@/components/ui/select";
 import { NotificationList } from "@/components/dashboard/NotificationList";
-import { mockApi } from "@/services/apiClient";
+import { getNotifications, sendMessage } from "@/services/apiClient";
 import type { NotificationItem } from "@/types";
 import { Send } from "lucide-react";
 
@@ -21,11 +21,11 @@ export default function TeacherNotificationsPage() {
   const [target, setTarget] = useState("class_students");
 
   useEffect(() => {
-    mockApi.getNotifications().then((n) => setNotifications(n));
+    getNotifications().then((n) => setNotifications(n));
   }, []);
 
   const send = async () => {
-    await mockApi.sendMessage({ content: body } as any);
+    await sendMessage({ content: body } as any);
     alert("Notification sent!");
     setTitle("");
     setBody("");
@@ -42,7 +42,7 @@ export default function TeacherNotificationsPage() {
               <div><Label>Title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
               <div><Label>Body</Label><Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} /></div>
               <div><Label>Target</Label>
-                <Select value={target} onChange={(e) => setTarget(e.target.value)}>
+                <Select value={target} onValueChange={(value) => setTarget(value)}>
                   <SelectItem value="class_students">My Class Students</SelectItem>
                   <SelectItem value="class_parents">My Class Parents</SelectItem>
                   <SelectItem value="specific_student">Specific Student</SelectItem>

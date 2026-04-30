@@ -6,7 +6,7 @@ import { cn } from "@/utils/cn";
 import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard, ClipboardList, FileText, HelpCircle, BarChart3,
-  BookOpen, Calendar, MessageSquare, Bell, LogOut, Menu, X
+  BookOpen, Calendar, MessageSquare, Bell, LogOut, Menu, X, Megaphone
 } from "lucide-react";
 import { useState } from "react";
 
@@ -20,6 +20,7 @@ const studentLinks = [
   { href: "/student/timetable", label: "timetable", icon: Calendar },
   { href: "/student/messages", label: "messages", icon: MessageSquare },
   { href: "/student/notifications", label: "notifications", icon: Bell },
+  { href: "/advertisements", label: "advertisements", icon: Megaphone },
 ];
 
 export function StudentSidebar() {

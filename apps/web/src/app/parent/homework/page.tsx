@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockApi } from "@/services/apiClient";
+import { getChildren, getHomework } from "@/services/apiClient";
 import type { HomeworkItem, ChildProfile } from "@/types";
 import { AlertTriangle } from "lucide-react";
 
@@ -20,12 +20,12 @@ export default function ParentHomeworkPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    mockApi.getChildren().then((c) => { setChildren(c); if (c.length > 0) setSelectedChild(c[0].id); });
+    getChildren().then((c) => { setChildren(c); if (c.length > 0) setSelectedChild(c[0].id); });
   }, []);
 
   useEffect(() => {
     setLoading(true);
-    mockApi.getHomework().then((h) => { setHomework(h); setLoading(false); });
+    getHomework().then((h) => { setHomework(h); setLoading(false); });
   }, [selectedChild]);
 
   const lateCount = homework.filter((h) => new Date(h.dueDate) < new Date()).length;
@@ -38,7 +38,7 @@ export default function ParentHomeworkPage() {
           <h1 className="text-2xl font-bold">Child Homework</h1>
           <div>
             <Label>Select Child</Label>
-            <Select value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)}>
+            <Select value={selectedChild} onValueChange={(value) => setSelectedChild(value)}>
               {children.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </Select>
           </div>
