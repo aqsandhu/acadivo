@@ -554,6 +554,172 @@ export async function getInstallments(id: string, tenantId: string) {
   return { installments, totalAmount: record.finalAmount, paidAmount: record.paidAmount, status: record.status };
 }
 
+// ──────────────────────────────────────────────
+// Installment Plan Service (Qist System)
+// ──────────────────────────────────────────────
+
+export interface InstallmentPlanItem {
+  installmentNo: number;
+  amount: number;
+  dueDate: string;
+  status: "PENDING" | "PAID" | "OVERDUE" | "PARTIAL";
+  paidDate?: string;
+}
+
+export async function createInstallmentPlan(
+  tenantId: string,
+  feeRecordId: string,
+  numberOfInstallments: number,
+  startDate: string,
+  intervalDays: number = 30
+) {
+  const record = await prisma.feeRecord.findFirst({
+    where: { id: feeRecordId, tenantId },
+    include: { student: { select: { userId: true } }, feeStructure: { select: { id: true } } },
+  });
+  if (!record) throw ApiError.notFound("Fee record not found");
+
+  const finalAmount = parseFloat(record.finalAmount.toString());
+  const installmentAmount = parseFloat((finalAmount / numberOfInstallments).toFixed(2));
+  const remainder = parseFloat((finalAmount - installmentAmount * numberOfInstallments).toFixed(2));
+
+  const installments = [];
+  let currentDate = new Date(startDate);
+  const now = new Date();
+
+  for (let i = 0; i < numberOfInstallments; i++) {
+    const amount = i === numberOfInstallments - 1 ? installmentAmount + remainder : installmentAmount;
+    const dueDate = new Date(currentDate);
+    const status = dueDate < now ? "OVERDUE" : "PENDING";
+
+    installments.push({
+      tenantId,
+      feeRecordId,
+      studentId: record.student?.userId || null,
+      feeStructureId: record.feeStructure?.id || null,
+      amount,
+      paidAmount: 0,
+      dueDate,
+      status: record.status === "PAID" ? "PAID" : status,
+      paidDate: record.status === "PAID" ? now : null,
+    });
+
+    currentDate.setDate(currentDate.getDate() + intervalDays);
+  }
+
+  // Delete existing installments for this fee record
+  await prisma.installment.deleteMany({ where: { feeRecordId, tenantId } });
+
+  // Create new installments
+  const created = await prisma.installment.createMany({
+    data: installments,
+  });
+
+  return { count: created.count, totalAmount: finalAmount, numberOfInstallments };
+}
+
+export async function payInstallment(
+  tenantId: string,
+  installmentId: string,
+  amount: number,
+  method: PaymentMethod,
+  transactionId?: string,
+  remarks?: string
+) {
+  const installment = await prisma.installment.findFirst({
+    where: { id: installmentId, tenantId },
+    include: { feeRecord: true },
+  });
+  if (!installment) throw ApiError.notFound("Installment not found");
+
+  const newPaidAmount = parseFloat(installment.paidAmount.toString()) + amount;
+  const instAmount = parseFloat(installment.amount.toString());
+
+  let status: FeeStatus = "PARTIAL";
+  if (newPaidAmount >= instAmount) status = "PAID";
+  if (newPaidAmount <= 0) status = "UNPAID";
+
+  const updated = await prisma.installment.update({
+    where: { id: installmentId },
+    data: {
+      paidAmount: newPaidAmount > instAmount ? instAmount : newPaidAmount,
+      status,
+      paymentMethod: method,
+      transactionId,
+      paidDate: new Date(),
+      receiptNumber: generateReceiptNumber(tenantId),
+      remarks,
+    },
+  });
+
+  // Update parent fee record balance
+  const feeRecord = installment.feeRecord;
+  const feePaidAmount = parseFloat(feeRecord.paidAmount.toString()) + amount;
+  const feeFinalAmount = parseFloat(feeRecord.finalAmount.toString());
+  const feeBalance = feeFinalAmount - feePaidAmount;
+
+  let feeStatus: FeeStatus = "PARTIAL";
+  if (feeBalance <= 0) feeStatus = "PAID";
+  if (feeBalance === feeFinalAmount) feeStatus = "UNPAID";
+
+  await prisma.feeRecord.update({
+    where: { id: feeRecord.id },
+    data: {
+      paidAmount: feePaidAmount,
+      balance: feeBalance > 0 ? feeBalance : 0,
+      status: feeStatus,
+      paymentMethod: method,
+      transactionId,
+      paidDate: new Date(),
+    },
+  });
+
+  return updated;
+}
+
+export async function getInstallmentSummary(studentId: string, tenantId?: string) {
+  const where: Record<string, unknown> = { studentId };
+  if (tenantId) where.tenantId = tenantId;
+
+  const installments = await prisma.installment.findMany({
+    where,
+    orderBy: { dueDate: "asc" },
+    include: {
+      feeRecord: {
+        select: { id: true, finalAmount: true, status: true },
+      },
+      feeStructure: {
+        select: { feeType: true },
+      },
+    },
+  });
+
+  const summary = {
+    totalInstallments: installments.length,
+    paid: installments.filter((i) => i.status === "PAID").length,
+    pending: installments.filter((i) => i.status === "PENDING").length,
+    overdue: installments.filter((i) => i.status === "OVERDUE").length,
+    partial: installments.filter((i) => i.status === "PARTIAL").length,
+    totalAmount: installments.reduce((sum, i) => sum + parseFloat(i.amount.toString()), 0),
+    totalPaid: installments.reduce((sum, i) => sum + parseFloat(i.paidAmount.toString()), 0),
+    totalBalance: installments.reduce((sum, i) => sum + (parseFloat(i.amount.toString()) - parseFloat(i.paidAmount.toString())), 0),
+    installments: installments.map((i, idx) => ({
+      id: i.id,
+      installmentNo: idx + 1,
+      amount: i.amount,
+      paidAmount: i.paidAmount,
+      dueDate: i.dueDate,
+      paidDate: i.paidDate,
+      status: i.status,
+      feeType: i.feeStructure?.feeType || "",
+      paymentMethod: i.paymentMethod,
+      transactionId: i.transactionId,
+    })),
+  };
+
+  return summary;
+}
+
 function generateReceiptNumber(tenantId: string): string {
   const prefix = "RCP";
   const timestamp = Date.now().toString(36).toUpperCase();

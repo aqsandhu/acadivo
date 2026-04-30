@@ -36,3 +36,20 @@ export const registerSchema = z.object({
   password: passwordSchema,
   name: z.string().min(2).max(100),
 });
+
+// Re-export all validation modules
+export * from "./common";
+export * from "./auth";
+export * from "./user";
+export * from "./school";
+export * from "./class";
+export * from "./fee";
+export * from "./attendance";
+export * from "./homework";
+export * from "./timetable";
+export * from "./message";
+export * from "./notification";
+export * from "./report";
+export * from "./result";
+export * from "./advertisement";
+export * from "./pakistan";

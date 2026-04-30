@@ -66,4 +66,21 @@ router.post(
 );
 router.get("/records/:id/installments", controller.getInstallments);
 
+// ── Qist (Installment Plan) ───────────────────
+router.post(
+  "/installments/plan",
+  authorize("PRINCIPAL", "ADMIN"),
+  validator.createInstallmentPlan,
+  validateRequest,
+  controller.createInstallmentPlan
+);
+router.post(
+  "/installments/pay",
+  authorize("PRINCIPAL", "ADMIN", "PARENT"),
+  validator.payInstallment,
+  validateRequest,
+  controller.payInstallment
+);
+router.get("/installments/summary/:studentId", controller.getInstallmentSummary);
+
 export default router;

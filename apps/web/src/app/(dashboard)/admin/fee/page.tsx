@@ -118,6 +118,7 @@ export default function AdminFeePage() {
                 <SelectOption value="ANNUALLY">Annually</SelectOption>
               </Select>
             </div>
+            <div className="grid gap-2"><Label>CNIC (for Admin/Parent)</Label><Input placeholder="#####-#######-#" value={form.cnic || ""} onChange={(e) => setForm({ ...form, cnic: e.target.value })} /></div>
             <div className="grid gap-2"><Label>Due Day</Label><Input type="number" value={form.dueDay || ""} onChange={(e) => setForm({ ...form, dueDay: Number(e.target.value) })} /></div>
             <div className="grid gap-2"><Label>Late Fee (PKR)</Label><Input type="number" value={form.lateFee || ""} onChange={(e) => setForm({ ...form, lateFee: Number(e.target.value) })} /></div>
           </div>

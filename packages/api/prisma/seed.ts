@@ -1003,5 +1003,38 @@ main()
     process.exit(1);
   })
   .finally(async () => {
+
+  // ───────────────────────────────────────────
+  // 14. Default Pakistani Grading Scheme
+  // ───────────────────────────────────────────
+  await prisma.gradingScheme.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000010' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000010',
+      tenantId: school.id,
+      name: 'Pakistani Standard Grading',
+      isDefault: true,
+      grades: JSON.stringify([
+        { grade: 'A+', minPercentage: 90, maxPercentage: 100, gpa: 4.0 },
+        { grade: 'A', minPercentage: 80, maxPercentage: 89, gpa: 3.7 },
+        { grade: 'B', minPercentage: 70, maxPercentage: 79, gpa: 3.0 },
+        { grade: 'C', minPercentage: 60, maxPercentage: 69, gpa: 2.0 },
+        { grade: 'D', minPercentage: 50, maxPercentage: 59, gpa: 1.0 },
+        { grade: 'F', minPercentage: 0, maxPercentage: 49, gpa: 0.0 },
+      ]),
+      academicYear: '2024-2025',
+    },
+  });
+
+  console.log('✅  Pakistani grading scheme seeded');
+}
+
+main()
+  .catch((e) => {
+    console.error('❌  Seed failed:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
     await prisma.$disconnect();
   });

@@ -22,7 +22,7 @@ export const recordPaymentSchema = z.object({
   amount: z.number().positive(),
   discount: z.number().min(0).default(0),
   fine: z.number().min(0).default(0),
-  method: z.enum(["CASH", "BANK_TRANSFER", "CHEQUE", "CARD", "ONLINE"]),
+  method: z.enum(["CASH", "BANK_TRANSFER", "CHEQUE", "CARD", "ONLINE", "JAZZCASH", "EASYPAYSA"]),
   transactionId: z.string().max(200).optional(),
   remarks: z.string().max(1000).optional(),
 });

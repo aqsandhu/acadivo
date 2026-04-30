@@ -129,3 +129,24 @@ export const getInstallments = asyncHandler(async (req: AuthRequest, res: Respon
   const result = await feeService.getInstallments(req.params.id, tenantId);
   return ApiResponse.success(res, result, "Installments fetched");
 });
+
+export const createInstallmentPlan = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const tenantId = req.user!.tenantId!;
+  const { feeRecordId, numberOfInstallments, startDate, intervalDays } = req.body;
+  const result = await feeService.createInstallmentPlan(tenantId, feeRecordId, numberOfInstallments, startDate, intervalDays);
+  return ApiResponse.success(res, result, "Installment plan created", 201);
+});
+
+export const payInstallment = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const tenantId = req.user!.tenantId!;
+  const { installmentId, amount, method, transactionId, remarks } = req.body;
+  const result = await feeService.payInstallment(tenantId, installmentId, amount, method, transactionId, remarks);
+  return ApiResponse.success(res, result, "Installment paid");
+});
+
+export const getInstallmentSummary = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const tenantId = req.user!.tenantId;
+  const { studentId } = req.params;
+  const result = await feeService.getInstallmentSummary(studentId, tenantId || undefined);
+  return ApiResponse.success(res, result, "Installment summary fetched");
+});
