@@ -12,8 +12,8 @@ import { summarizeAttendance, getStartOfMonth, getEndOfMonth, isLateSubmission }
 // ═══════════════════════════════════════════════
 
 export async function getStudentDashboard(userId: string, tenantId: string) {
-  const student = await prisma.student.findUnique({
-    where: { userId },
+  const student = await prisma.student.findFirst({
+    where: { userId, tenantId },
     include: {
       class: true,
       section: true,
@@ -105,8 +105,8 @@ export async function getStudentDashboard(userId: string, tenantId: string) {
 }
 
 export async function getStudentProfile(userId: string, tenantId: string) {
-  const student = await prisma.student.findUnique({
-    where: { userId },
+  const student = await prisma.student.findFirst({
+    where: { userId, tenantId },
     include: {
       class: true,
       section: true,

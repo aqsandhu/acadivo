@@ -128,7 +128,8 @@ export const updateMe = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const setupParentPassword = asyncHandler(async (req: Request, res: Response) => {
-  const result = await authService.setupParentPassword(req.body);
+  const { phone, otp, newPassword } = req.body;
+  const result = await authService.setupParentPassword({ phone, otp, newPassword });
   res.status(200).json(successResponse(result, result.message));
 });
 

@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Search, Users, Plus, Edit, Trash2, Upload, Download, Eye, ArrowRightLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +21,17 @@ import { useApi, getStudents, createStudent, updateStudent, deleteStudent, type 
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
+const studentSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  class: z.string().min(1, "Class is required"),
+  section: z.string().min(1, "Section is required"),
+  rollNumber: z.string().min(1, "Roll number is required"),
+  parentName: z.string().optional(),
+  parentPhone: z.string().optional(),
+});
+
+type StudentFormData = z.infer<typeof studentSchema>;
+
 export default function AdminStudentsPage() {
   const { t } = useTranslation();
   const { toasts, addToast, removeToast } = useToast();
@@ -26,24 +40,57 @@ export default function AdminStudentsPage() {
   const [sectionFilter, setSectionFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
-  const [form, setForm] = useState<Partial<Student>>({});
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+    setValue,
+  } = useForm<StudentFormData>({
+    resolver: zodResolver(studentSchema),
+    defaultValues: {
+      name: "",
+      class: "",
+      section: "",
+      rollNumber: "",
+      parentName: "",
+      parentPhone: "",
+    },
+  });
 
   const { data: students, loading, refetch } = useApi(() =>
     getStudents({ search: search || undefined, class: classFilter || undefined, section: sectionFilter || undefined })
   );
 
-  const handleSave = async () => {
+  const openModal = (student?: Student) => {
+    if (student) {
+      setEditStudent(student);
+      setValue("name", (student as any).name || "");
+      setValue("class", (student as any).class || "");
+      setValue("section", (student as any).section || "");
+      setValue("rollNumber", student.rollNumber || "");
+      setValue("parentName", (student as any).parentName || "");
+      setValue("parentPhone", (student as any).parentPhone || "");
+    } else {
+      setEditStudent(null);
+      reset();
+    }
+    setModalOpen(true);
+  };
+
+  const handleSave = async (data: StudentFormData) => {
     try {
       if (editStudent) {
-        await updateStudent(editStudent.id, form);
+        await updateStudent(editStudent.id, data as Partial<Student>);
         addToast({ title: "Success", description: "Student updated", variant: "success" });
       } else {
-        await createStudent(form);
+        await createStudent(data as Partial<Student>);
         addToast({ title: "Success", description: "Student added", variant: "success" });
       }
       setModalOpen(false);
       setEditStudent(null);
-      setForm({});
+      reset();
       refetch();
     } catch {
       addToast({ title: "Error", description: "Failed to save", variant: "destructive" });
@@ -68,7 +115,7 @@ export default function AdminStudentsPage() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" />{t("common.bulkImport")}</Button>
           <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" />{t("common.export")}</Button>
-          <Button size="sm" onClick={() => { setForm({}); setModalOpen(true); }}><Plus className="mr-2 h-4 w-4" />{t("common.add")}</Button>
+          <Button size="sm" onClick={() => openModal()}><Plus className="mr-2 h-4 w-4" />{t("common.add")}</Button>
         </div>
       </div>
 
@@ -111,12 +158,12 @@ export default function AdminStudentsPage() {
                       <TableCell>{student.class}</TableCell>
                       <TableCell>{student.section}</TableCell>
                       <TableCell>{student.rollNumber}</TableCell>
-                      <TableCell>{student.parentName}</TableCell>
-                      <TableCell>{student.attendancePercent}%</TableCell>
-                      <TableCell><Badge variant={student.status === "ACTIVE" ? "default" : "secondary"}>{student.status}</Badge></TableCell>
+                      <TableCell>{(student as any).parentName}</TableCell>
+                      <TableCell>{(student as any).attendancePercent}%</TableCell>
+                      <TableCell><Badge variant={(student as any).status === "ACTIVE" ? "default" : "secondary"}>{(student as any).status}</Badge></TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => { setEditStudent(student); setForm(student); setModalOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => openModal(student)}><Edit className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon"><ArrowRightLeft className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleDelete(student.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
@@ -130,18 +177,43 @@ export default function AdminStudentsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={modalOpen} onOpenChange={(open) => { if (!open) { setModalOpen(false); setEditStudent(null); setForm({}); } }}>
+      <Dialog open={modalOpen} onOpenChange={(open) => { if (!open) { setModalOpen(false); setEditStudent(null); reset(); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editStudent ? "Edit Student" : "Add Student"}</DialogTitle><DialogDescription>Fill student details.</DialogDescription></DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2"><Label>Name</Label><Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div className="grid gap-2"><Label>Class</Label><Input value={form.class || ""} onChange={(e) => setForm({ ...form, class: e.target.value })} /></div>
-            <div className="grid gap-2"><Label>Section</Label><Input value={form.section || ""} onChange={(e) => setForm({ ...form, section: e.target.value })} /></div>
-            <div className="grid gap-2"><Label>Roll Number</Label><Input value={form.rollNumber || ""} onChange={(e) => setForm({ ...form, rollNumber: e.target.value })} /></div>
-            <div className="grid gap-2"><Label>Parent Name</Label><Input value={form.parentName || ""} onChange={(e) => setForm({ ...form, parentName: e.target.value })} /></div>
-            <div className="grid gap-2"><Label>Parent Phone</Label><Input value={form.parentPhone || ""} onChange={(e) => setForm({ ...form, parentPhone: e.target.value })} /></div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => { setModalOpen(false); setEditStudent(null); setForm({}); }}>{t("common.cancel")}</Button><Button onClick={handleSave}>{t("common.save")}</Button></DialogFooter>
+          <form onSubmit={handleSubmit(handleSave)} className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Name</Label>
+              <Input {...register("name")} />
+              {errors.name && <p className="text-xs text-danger-500">{errors.name.message}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label>Class</Label>
+              <Input {...register("class")} />
+              {errors.class && <p className="text-xs text-danger-500">{errors.class.message}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label>Section</Label>
+              <Input {...register("section")} />
+              {errors.section && <p className="text-xs text-danger-500">{errors.section.message}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label>Roll Number</Label>
+              <Input {...register("rollNumber")} />
+              {errors.rollNumber && <p className="text-xs text-danger-500">{errors.rollNumber.message}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label>Parent Name</Label>
+              <Input {...register("parentName")} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Parent Phone</Label>
+              <Input {...register("parentPhone")} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setModalOpen(false); setEditStudent(null); reset(); }}>{t("common.cancel")}</Button>
+              <Button type="submit">{t("common.save")}</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -13,8 +13,9 @@ export const loginSchema = z.object({
 export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
-  name: z.string().min(2).max(100),
-  role: z.enum(["ADMIN", "PRINCIPAL", "TEACHER", "STUDENT", "PARENT"]),
+  firstName: z.string().min(2).max(100),
+  lastName: z.string().min(2).max(100),
+  role: z.enum(["SUPER_ADMIN", "ADMIN", "PRINCIPAL", "TEACHER", "STUDENT", "PARENT"]),
   tenantId: z.string().uuid().optional(),
 });
 

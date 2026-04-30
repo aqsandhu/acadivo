@@ -459,11 +459,11 @@ export async function deleteExamResult(resultId: string, tenantId: string) {
 // ═══════════════════════════════════════════════
 
 export async function getStudentExams(studentId: string, tenantId: string) {
-  const student = await prisma.student.findUnique({
-    where: { userId: studentId },
+  const student = await prisma.student.findFirst({
+    where: { userId: studentId, tenantId },
     include: { class: true, section: true },
   });
-  if (!student || student.tenantId !== tenantId) throw ApiError.notFound("Student not found");
+  if (!student) throw ApiError.notFound("Student not found");
 
   const exams = await prisma.exam.findMany({
     where: {
@@ -504,8 +504,8 @@ export async function getStudentExams(studentId: string, tenantId: string) {
 }
 
 export async function getStudentExamResults(studentId: string, tenantId: string, examId?: string) {
-  const student = await prisma.student.findUnique({ where: { userId: studentId } });
-  if (!student || student.tenantId !== tenantId) throw ApiError.notFound("Student not found");
+  const student = await prisma.student.findFirst({ where: { userId: studentId, tenantId } });
+  if (!student) throw ApiError.notFound("Student not found");
 
   const where: Record<string, unknown> = { studentId, tenantId };
   if (examId) where.examId = examId;

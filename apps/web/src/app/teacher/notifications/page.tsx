@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectItem } from "@/components/ui/select";
 import { NotificationList } from "@/components/dashboard/NotificationList";
-import { getNotifications, sendMessage } from "@/services/apiClient";
+import { getNotifications, sendNotification } from "@/services/apiClient";
 import type { NotificationItem } from "@/types";
 import { Send } from "lucide-react";
 
@@ -25,10 +25,24 @@ export default function TeacherNotificationsPage() {
   }, []);
 
   const send = async () => {
-    await sendMessage({ content: body } as any);
-    alert("Notification sent!");
-    setTitle("");
-    setBody("");
+    if (!title.trim() || !body.trim()) {
+      alert("Please fill in both title and body");
+      return;
+    }
+    try {
+      await sendNotification({
+        title,
+        body,
+        target: target,
+      });
+      alert("Notification sent!");
+      setTitle("");
+      setBody("");
+      const updated = await getNotifications();
+      setNotifications(updated);
+    } catch {
+      alert("Failed to send notification");
+    }
   };
 
   return (

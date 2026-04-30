@@ -22,7 +22,7 @@ export const recordPaymentSchema = z.object({
   amount: z.number().positive(),
   discount: z.number().min(0).default(0),
   fine: z.number().min(0).default(0),
-  method: z.enum(["CASH", "BANK_TRANSFER", "CHEQUE", "CARD", "ONLINE", "JAZZCASH", "EASYPAYSA"]),
+  method: z.enum(["CASH", "BANK_TRANSFER", "EASYPAYSA", "JAZZCASH", "CHEQUE", "CARD", "ONLINE"]),
   transactionId: z.string().max(200).optional(),
   remarks: z.string().max(1000).optional(),
 });
@@ -30,7 +30,7 @@ export const recordPaymentSchema = z.object({
 export const feeQuerySchema = z.object({
   studentId: z.string().uuid().optional(),
   classId: z.string().uuid().optional(),
-  status: z.enum(["PAID", "PENDING", "PARTIAL", "OVERDUE", "WAIVED"]).optional(),
+  status: z.enum(["PAID", "UNPAID", "PARTIAL", "OVERDUE", "WAIVED"]).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
 });
