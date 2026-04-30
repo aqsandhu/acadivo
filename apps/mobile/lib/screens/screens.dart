@@ -66,6 +66,7 @@ export 'auth/login_screen.dart';
 export 'auth/forgot_password_screen.dart';
 export 'auth/reset_password_screen.dart';
 export 'auth/setup_parent_password_screen.dart';
+export 'auth/splash_screen.dart';
 
 export 'super_admin/super_admin_dashboard_screen.dart';
 export 'super_admin/manage_schools_screen.dart';

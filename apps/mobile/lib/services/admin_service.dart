@@ -8,6 +8,7 @@ import '../models/section_model.dart';
 import '../models/student_model.dart';
 import '../models/subject_model.dart';
 import '../models/teacher_model.dart';
+import '../models/timetable_entry_model.dart';
 import '../models/user_model.dart';
 import 'api_service.dart';
 
@@ -221,6 +222,37 @@ class AdminService {
         '${ApiConstants.adminAnnouncements}/$announcementId',
       );
       return response.statusCode == 200;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  Future<List<TimetableEntryModel>> getTimetable(String classId, String sectionId) async {
+    try {
+      final response = await _apiService.dio.get(
+        '/admin/timetable',
+        queryParameters: {
+          'classId': classId,
+          'sectionId': sectionId,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        final list = response.data['data'] ?? response.data ?? [];
+        return (list as List).map((e) => TimetableEntryModel.fromJson(e as Map<String, dynamic>)).toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  Future<bool> createTimetableEntry(Map<String, dynamic> data) async {
+    try {
+      final response = await _apiService.dio.post(
+        '/admin/timetable',
+        data: data,
+      );
+      return response.statusCode == 201 || response.statusCode == 200;
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
