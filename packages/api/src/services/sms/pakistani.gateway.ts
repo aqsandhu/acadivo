@@ -172,3 +172,56 @@ export function isPakistaniNumber(phone: string): boolean {
 }
 
 export { gateways };
+
+// ───────────────────────────────────────────────────
+// Pakistani Network Error Handling
+// ───────────────────────────────────────────────────
+
+export class PakistaniNetworkError extends Error {
+  constructor(
+    message: string,
+    public provider: string,
+    public code: string,
+    public retryable: boolean = true
+  ) {
+    super(message);
+    this.name = "PakistaniNetworkError";
+  }
+}
+
+export function handlePakistaniNetworkError(provider: string, err: any): PakistaniNetworkError {
+  const message = err?.message || err?.response?.data?.message || "Unknown network error";
+  const code = err?.response?.status || err?.code || "UNKNOWN";
+
+  // Common Pakistani network issues
+  const retryableCodes = [
+    "ECONNRESET",      // Connection reset (common in Pakistan during load shedding)
+    "ETIMEDOUT",       // Timeout (slow networks)
+    "ECONNREFUSED",    // Gateway temporarily down
+    502, 503, 504,     // Gateway errors
+    "NETWORK_ERROR",   // Generic network issue
+    "INSUFFICIENT_BALANCE", // Account balance issue (retry after top-up)
+  ];
+
+  const isRetryable = retryableCodes.includes(code) || retryableCodes.includes(String(code));
+
+  // Specific provider error mapping
+  let userMessage = message;
+  if (provider === "jazz") {
+    if (code === 401) userMessage = "Jazz API authentication failed. Check API key.";
+    if (code === 403) userMessage = "Jazz API access denied. Verify account permissions.";
+    if (code === 429) userMessage = "Jazz API rate limit exceeded. Please slow down requests.";
+  } else if (provider === "zong") {
+    if (code === 401) userMessage = "Zong API authentication failed. Check API key.";
+    if (code === 400) userMessage = "Zong API invalid request. Check phone number format.";
+  } else if (provider === "telenor") {
+    if (code === 401) userMessage = "Telenor API authentication failed. Check API credentials.";
+    if (code === 500) userMessage = "Telenor API server error. Retry shortly.";
+  }
+
+  return new PakistaniNetworkError(userMessage, provider, String(code), isRetryable);
+}
+
+export function logPakistaniSMSMetrics(provider: string, result: SMSResult, durationMs: number) {
+  logger.info(`[SMS METRICS] provider=${provider} success=${result.success} duration=${durationMs}ms messageId=${result.messageId || "N/A"}`);
+}

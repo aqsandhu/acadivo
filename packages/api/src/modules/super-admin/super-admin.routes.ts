@@ -9,6 +9,7 @@ import * as validator from "./super-admin.validator";
 import { validateBody, validateQuery } from "../../middleware/validateRequest";
 import { authMiddleware } from "../../middleware/auth";
 import { rbacMiddleware } from "../../middleware/rbac";
+import { requireSuperAdminPermission } from "../../middleware/superAdminPermissions";
 import { tenantGuard } from "../../middleware/tenantGuard";
 import { uploadSingle } from "../../middleware/uploadMiddleware";
 import { UserRole } from "@prisma/client";
@@ -28,11 +29,11 @@ router.get("/schools/:id", controller.getSchool);
 router.post("/schools", uploadSingle("logo"), validateBody(validator.onboardSchoolValidator), controller.onboardSchool);
 router.put("/schools/:id", uploadSingle("logo"), validateBody(validator.updateSchoolValidator), controller.updateSchool);
 router.put("/schools/:id/status", validateBody(validator.updateSchoolStatusValidator), controller.updateSchoolStatus);
-router.delete("/schools/:id", controller.deleteSchool);
+router.delete("/schools/:id", requireSuperAdminPermission("manage:schools"), controller.deleteSchool);
 
 // Subscriptions
 router.get("/subscriptions", controller.listSubscriptions);
-router.put("/subscriptions/:id", validateBody(validator.updateSubscriptionValidator), controller.updateSubscription);
+router.put("/subscriptions/:id", requireSuperAdminPermission("manage:subscriptions"), validateBody(validator.updateSubscriptionValidator), controller.updateSubscription);
 
 // Analytics
 router.get("/analytics", controller.getAnalytics);
@@ -47,12 +48,12 @@ router.post("/announcements", validateBody(validator.createAnnouncementValidator
 router.get("/advertisements", controller.listAds);
 router.post("/advertisements", uploadSingle("image"), validateBody(validator.createAdValidator), controller.createAd);
 router.put("/advertisements/:id", uploadSingle("image"), validateBody(validator.updateAdValidator), controller.updateAd);
-router.delete("/advertisements/:id", controller.deleteAd);
+router.delete("/advertisements/:id", requireSuperAdminPermission("manage:ads"), controller.deleteAd);
 router.get("/advertisements/:id/stats", controller.getAdStats);
 router.post("/ads/:id/toggle", controller.toggleAd);
 
 // Bulk Users
-router.post("/users/bulk", controller.bulkCreateUsers);
+router.post("/users/bulk", requireSuperAdminPermission("bulk:operations"), controller.bulkCreateUsers);
 
 // System-wide Settings
 router.get("/settings", controller.getSystemSettings);

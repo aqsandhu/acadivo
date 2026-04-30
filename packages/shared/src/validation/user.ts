@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { emailSchema, phoneSchema, paginationSchema } from "./common";
+import { cnicOptionalSchema } from "./pakistan";
 
 export const createUserSchema = z.object({
   email: emailSchema,
@@ -24,6 +25,26 @@ export const updateProfileSchema = z.object({
   address: z.string().max(500).optional(),
   dateOfBirth: z.coerce.date().optional(),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
+  cnic: cnicOptionalSchema,
+});
+
+export const createParentSchema = z.object({
+  email: emailSchema,
+  name: z.string().min(2).max(100),
+  phone: phoneSchema.optional(),
+  cnic: cnicOptionalSchema,
+  address: z.string().max(500).optional(),
+  tenantId: z.string().uuid(),
+});
+
+export const createAdminSchema = z.object({
+  email: emailSchema,
+  name: z.string().min(2).max(100),
+  phone: phoneSchema.optional(),
+  cnic: cnicOptionalSchema,
+  tenantId: z.string().uuid(),
+  department: z.string().max(200).optional(),
+  permissions: z.array(z.string()).optional(),
 });
 
 export const userQuerySchema = z.object({

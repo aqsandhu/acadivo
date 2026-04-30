@@ -355,6 +355,21 @@ async function getFeeRecords(params?: { studentId?: string; status?: string }): 
   return res.data.data || [];
 }
 
+async function createInstallmentPlan(data: { feeRecordId: string; numberOfInstallments: number; startDate: string; intervalDays?: number }): Promise<any> {
+  const res = await api.post<ApiResponse<any>>("/fee/installments/plan", data);
+  return res.data.data;
+}
+
+async function payInstallment(data: { installmentId: string; amount: number; method: string; transactionId?: string; remarks?: string }): Promise<any> {
+  const res = await api.post<ApiResponse<any>>("/fee/installments/pay", data);
+  return res.data.data;
+}
+
+async function getInstallmentSummary(studentId: string): Promise<any> {
+  const res = await api.get<ApiResponse<any>>(`/fee/installments/summary/${studentId}`);
+  return res.data.data || {};
+}
+
 /* ── Attendance ── */
 
 async function getAttendance(params?: { date?: string; class?: string; section?: string }): Promise<Attendance[]> {
@@ -653,6 +668,9 @@ export const mockApi = {
   getFeeStructures,
   createFeeStructure,
   getFeeRecords,
+  createInstallmentPlan,
+  payInstallment,
+  getInstallmentSummary,
 
   // Attendance
   getAttendance,
@@ -801,6 +819,9 @@ export {
   getFeeStructures,
   createFeeStructure,
   getFeeRecords,
+  createInstallmentPlan,
+  payInstallment,
+  getInstallmentSummary,
   getAttendance,
   saveAttendance,
   getAttendanceSummary,

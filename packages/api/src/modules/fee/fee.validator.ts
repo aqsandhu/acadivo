@@ -46,7 +46,7 @@ export const updateFeeRecord = [
 
 export const recordPayment = [
   body("amount").notEmpty().isDecimal().withMessage("Payment amount is required"),
-  body("method").notEmpty().isIn(["CASH", "BANK_TRANSFER", "EASYPAYSA", "JAZZCASH"]),
+  body("method").notEmpty().isIn(["CASH", "BANK_TRANSFER", "EASYPAYSA", "JAZZCASH", "CHEQUE", "CARD", "ONLINE"]),
   body("transactionId").optional().trim(),
 ];
 
@@ -54,4 +54,19 @@ export const createInstallments = [
   body("count").notEmpty().isInt({ min: 2, max: 12 }).withMessage("Installment count must be between 2 and 12"),
   body("startDate").notEmpty().isISO8601(),
   body("intervalDays").notEmpty().isInt({ min: 1 }).withMessage("Interval days must be at least 1"),
+];
+
+export const createInstallmentPlan = [
+  body("feeRecordId").notEmpty().isUUID(),
+  body("numberOfInstallments").notEmpty().isInt({ min: 2, max: 12 }),
+  body("startDate").notEmpty().isISO8601(),
+  body("intervalDays").optional().isInt({ min: 7, max: 90 }),
+];
+
+export const payInstallment = [
+  body("installmentId").notEmpty().isUUID(),
+  body("amount").notEmpty().isDecimal(),
+  body("method").notEmpty().isIn(["CASH", "BANK_TRANSFER", "EASYPAYSA", "JAZZCASH", "CHEQUE", "CARD", "ONLINE"]),
+  body("transactionId").optional().trim(),
+  body("remarks").optional().trim(),
 ];
