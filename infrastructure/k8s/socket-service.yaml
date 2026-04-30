@@ -1,0 +1,21 @@
+# =============================================================================
+# Acadivo — Socket Service (ClusterIP for internal access)
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: acadivo-socket
+  namespace: acadivo
+  labels:
+    app: acadivo
+    component: socket
+spec:
+  type: ClusterIP
+  selector:
+    app: acadivo
+    component: socket
+  ports:
+    - name: websocket
+      port: 5001
+      targetPort: 5001
+      protocol: TCP

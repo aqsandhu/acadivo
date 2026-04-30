@@ -1,0 +1,10 @@
+# =============================================================================
+# Acadivo — Kubernetes Namespace
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: acadivo
+  labels:
+    app: acadivo
+    environment: production
