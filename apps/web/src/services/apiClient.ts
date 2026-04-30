@@ -367,6 +367,11 @@ async function saveAttendance(records: Attendance[]): Promise<ApiResponse<void>>
   return res.data;
 }
 
+async function saveBulkAttendance(records: { studentId: string; date: string; status: string; classId?: string; sectionId?: string }[]): Promise<ApiResponse<void>> {
+  const res = await api.post<ApiResponse<void>>("/attendance/bulk", { records });
+  return res.data;
+}
+
 async function getAttendanceSummary(studentId?: string): Promise<any> {
   const url = studentId ? `/parent/children/${studentId}/attendance/summary` : '/principal/attendance-summary';
   const res = await api.get<ApiResponse<any>>(url);
@@ -412,6 +417,11 @@ async function sendMessage(data: { content: string; receiverId?: string; groupId
 async function getNotifications(): Promise<Notification[]> {
   const res = await api.get<ApiResponse<Notification[]>>("/communication/notifications");
   return res.data.data || [];
+}
+
+async function sendNotification(data: { title: string; body: string; target?: string; targetRoles?: string[]; targetClassIds?: string[]; targetSectionIds?: string[] }): Promise<Notification> {
+  const res = await api.post<ApiResponse<Notification>>("/communication/notifications", data);
+  return res.data.data!;
 }
 
 async function markNotificationRead(id: string): Promise<ApiResponse<void>> {
@@ -657,6 +667,7 @@ export const mockApi = {
   // Attendance
   getAttendance,
   saveAttendance,
+  saveBulkAttendance,
   getAttendanceSummary,
 
   // Announcements
@@ -671,6 +682,7 @@ export const mockApi = {
 
   // Notifications
   getNotifications,
+  sendNotification,
   markNotificationRead,
   markAllNotificationsRead,
   deleteNotification,
@@ -803,6 +815,7 @@ export {
   getFeeRecords,
   getAttendance,
   saveAttendance,
+  saveBulkAttendance,
   getAttendanceSummary,
   getAnnouncements,
   createAnnouncement,
@@ -811,6 +824,7 @@ export {
   getMessages,
   sendMessage,
   getNotifications,
+  sendNotification,
   markNotificationRead,
   markAllNotificationsRead,
   deleteNotification,

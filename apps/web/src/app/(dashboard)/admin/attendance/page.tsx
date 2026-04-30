@@ -11,7 +11,7 @@ import { Select, SelectOption } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useApi, getAttendance, getStudents, type AttendanceRecord } from "@/services/apiClient";
+import { useApi, getAttendance, getStudents, saveBulkAttendance, type AttendanceRecord } from "@/services/apiClient";
 import { useToast } from "@/hooks/useToast";
 import { Toaster } from "@/components/ui/toast";
 
@@ -31,8 +31,20 @@ export default function AdminAttendancePage() {
     setAttendanceMap((prev) => ({ ...prev, [studentId]: status }));
   };
 
-  const handleSave = () => {
-    addToast({ title: "Success", description: "Attendance saved", variant: "success" });
+  const handleSave = async () => {
+    const records = Object.entries(attendanceMap).map(([studentId, status]) => ({
+      studentId,
+      date,
+      status,
+      classId: classFilter || undefined,
+      sectionId: sectionFilter || undefined,
+    }));
+    try {
+      await saveBulkAttendance(records);
+      addToast({ title: "Success", description: "Attendance saved", variant: "success" });
+    } catch {
+      addToast({ title: "Error", description: "Failed to save attendance", variant: "destructive" });
+    }
   };
 
   const absentees = students?.filter((s) => attendanceMap[s.id] === "ABSENT") || [];

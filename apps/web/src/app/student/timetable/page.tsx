@@ -5,8 +5,8 @@ import { StudentSidebar } from "@/components/layout/StudentSidebar";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { TimetableGrid } from "@/components/dashboard/TimetableGrid";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getTimetable } from "@/services/apiClient";
-import type { TimetableSlot } from "@/types";
+import { getTimetable, getMe } from "@/services/apiClient";
+import type { TimetableSlot, User } from "@/types";
 import { AlertTriangle, Clock } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/utils";
 
@@ -14,17 +14,30 @@ export default function StudentTimetablePage() {
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    getTimetable("10th", "A").then((t) => {
-      setSlots(t);
-      // Use the most recent updatedAt from entries, or fallback to now
-      const latest = t.length > 0
-        ? t.map((s: any) => s.updatedAt || s.createdAt).filter(Boolean).sort().reverse()[0]
-        : null;
-      setLastUpdated(latest);
-      setLoading(false);
-    });
+    async function loadTimetable() {
+      try {
+        const me = await getMe();
+        if (me.success && me.data) {
+          setUser(me.data);
+          const studentClass = (me.data as any)?.student?.class?.name || (me.data as any)?.class || "";
+          const studentSection = (me.data as any)?.student?.section?.name || (me.data as any)?.section || "";
+          const t = await getTimetable(studentClass || undefined, studentSection || undefined);
+          setSlots(t);
+          const latest = t.length > 0
+            ? t.map((s: any) => s.updatedAt || s.createdAt).filter(Boolean).sort().reverse()[0]
+            : null;
+          setLastUpdated(latest);
+        }
+      } catch {
+        // fallback to empty
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadTimetable();
   }, []);
 
   const isRecentlyUpdated = lastUpdated
