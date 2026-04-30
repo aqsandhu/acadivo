@@ -10,7 +10,7 @@ import * as notificationService from "./notification.service";
 // ──────────────────────────────────────────────
 
 export const getNotifications = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const userId = req.user!.id;
+  const userId = req.user!.userId;
   const tenantId = req.user!.tenantId || (req.query.tenantId as string);
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 20;
@@ -26,22 +26,22 @@ export const getNotifications = asyncHandler(async (req: AuthRequest, res: Respo
 });
 
 export const markNotificationRead = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const notification = await notificationService.markAsRead(req.params.id, req.user!.id);
+  const notification = await notificationService.markAsRead(req.params.id, req.user!.userId);
   return ApiResponse.success(res, notification, "Notification marked as read");
 });
 
 export const markAllNotificationsRead = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const result = await notificationService.markAllAsRead(req.user!.id);
+  const result = await notificationService.markAllAsRead(req.user!.userId);
   return ApiResponse.success(res, { updatedCount: result.count }, "All notifications marked as read");
 });
 
 export const deleteNotification = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const result = await communicationService.deleteNotification(req.params.id, req.user!.id);
+  const result = await communicationService.deleteNotification(req.params.id, req.user!.userId);
   return ApiResponse.success(res, result, "Notification deleted");
 });
 
 export const getUnreadNotificationCount = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const count = await notificationService.getUnreadCount(req.user!.id);
+  const count = await notificationService.getUnreadCount(req.user!.userId);
   return ApiResponse.success(res, { count }, "Unread count fetched");
 });
 
@@ -81,7 +81,7 @@ export const createAnnouncement = asyncHandler(async (req: AuthRequest, res: Res
   const tenantId = req.user!.tenantId!;
   const announcement = await communicationService.createAnnouncement(
     tenantId,
-    req.user!.id,
+    req.user!.userId,
     req.body
   );
   return ApiResponse.success(res, announcement, "Announcement created", 201);
@@ -131,14 +131,14 @@ export const getSchoolAnnouncements = asyncHandler(async (req: AuthRequest, res:
 // ──────────────────────────────────────────────
 
 export const getConversations = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const userId = req.user!.id;
+  const userId = req.user!.userId;
   const tenantId = req.user!.tenantId || (req.query.tenantId as string);
   const result = await communicationService.getConversations(userId, tenantId);
   return ApiResponse.success(res, result.conversations, "Conversations fetched");
 });
 
 export const getMessagesWithUser = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const userId = req.user!.id;
+  const userId = req.user!.userId;
   const tenantId = req.user!.tenantId || (req.query.tenantId as string);
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 50;
@@ -156,7 +156,7 @@ export const getMessagesWithUser = asyncHandler(async (req: AuthRequest, res: Re
 
 export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) => {
   const tenantId = req.user!.tenantId!;
-  const message = await communicationService.sendMessage(tenantId, req.user!.id, req.body);
+  const message = await communicationService.sendMessage(tenantId, req.user!.userId, req.body);
   return ApiResponse.success(res, message, "Message sent", 201);
 });
 
@@ -164,7 +164,7 @@ export const markMessageRead = asyncHandler(async (req: AuthRequest, res: Respon
   const tenantId = req.user!.tenantId || (req.query.tenantId as string);
   const message = await communicationService.markMessageAsRead(
     req.params.id,
-    req.user!.id,
+    req.user!.userId,
     tenantId
   );
   return ApiResponse.success(res, message, "Message marked as read");
@@ -174,14 +174,14 @@ export const deleteMessage = asyncHandler(async (req: AuthRequest, res: Response
   const tenantId = req.user!.tenantId || (req.query.tenantId as string);
   const result = await communicationService.softDeleteMessage(
     req.params.id,
-    req.user!.id,
+    req.user!.userId,
     tenantId
   );
   return ApiResponse.success(res, result, "Message deleted");
 });
 
 export const getUnreadMessageCount = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const userId = req.user!.id;
+  const userId = req.user!.userId;
   const tenantId = req.user!.tenantId || (req.query.tenantId as string);
   const result = await communicationService.getUnreadMessageCount(userId, tenantId);
   return ApiResponse.success(res, result, "Unread message count fetched");
@@ -189,6 +189,6 @@ export const getUnreadMessageCount = asyncHandler(async (req: AuthRequest, res: 
 
 export const sendGroupMessage = asyncHandler(async (req: AuthRequest, res: Response) => {
   const tenantId = req.user!.tenantId!;
-  const result = await communicationService.sendGroupMessage(tenantId, req.user!.id, req.body);
+  const result = await communicationService.sendGroupMessage(tenantId, req.user!.userId, req.body);
   return ApiResponse.success(res, result, "Group message sent", 201);
 });

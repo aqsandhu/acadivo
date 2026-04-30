@@ -7,23 +7,27 @@ export class ApiError extends Error {
   public readonly statusCode: number;
   public readonly isOperational: boolean;
   public readonly code: string;
+  public readonly details?: Record<string, string[]>;
 
   /**
    * @param message - Human-readable error message
    * @param statusCode - HTTP status code
    * @param isOperational - True if this is a known/expected error (not a crash)
    * @param code - Machine-readable error code
+   * @param details - Optional validation / error details
    */
   constructor(
     message: string,
     statusCode = 500,
     isOperational = true,
-    code = "INTERNAL_ERROR"
+    code = "INTERNAL_ERROR",
+    details?: Record<string, string[]>
   ) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = isOperational;
     this.code = code;
+    this.details = details;
     Error.captureStackTrace(this, this.constructor);
     Object.setPrototypeOf(this, ApiError.prototype);
   }

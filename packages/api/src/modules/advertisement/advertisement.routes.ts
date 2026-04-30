@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../../middleware/auth";
-import { validateRequest } from "../../middleware/validation";
+import { validateRequest } from "../../middleware/validateRequest";
 import * as controller from "./advertisement.controller";
 import * as validator from "./advertisement.validator";
 
@@ -9,6 +9,7 @@ const router = Router();
 // ── Public Ad Routes (authenticated) ────────────
 router.use(authenticate);
 
+router.get("/consumer", controller.getConsumerAds);
 router.get("/", controller.getActiveAds);
 router.get("/:id", controller.getAdById);
 router.post("/:id/view", validator.trackInteraction, validateRequest, controller.trackImpression);

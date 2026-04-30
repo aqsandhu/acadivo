@@ -47,6 +47,9 @@ export interface LoginDTO {
   uniqueId?: string;
   email?: string;
   password: string;
+  role?: UserRole; // Required when uniqueId is shared (student/parent)
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 export interface ResetPasswordDTO {
@@ -82,7 +85,7 @@ export interface SetupParentPasswordDTO {
 // ────────────────────────────────────────────────
 
 function generateUniqueId(role: UserRole, tenantCode: string, seq: number): string {
-  const prefix = role === "SUPER_ADMIN" ? "SA" : role === "PRINCIPAL" ? "PR" : role === "ADMIN" ? "AD" : role === "TEACHER" ? "TC" : role === "STUDENT" ? "ST" : "PA";
+  const prefix = role === "SUPER_ADMIN" ? "SA" : role === "PRINCIPAL" ? "PR" : role === "ADMIN" ? "AD" : role === "TEACHER" ? "TC" : "ACD";
   return `${prefix}-${tenantCode}-${String(seq).padStart(4, "0")}`;
 }
 
@@ -197,10 +200,58 @@ export async function loginUser(dto: LoginDTO) {
     throw ApiError.badRequest("uniqueId or email is required", "LOGIN_MISSING_IDENTIFIER");
   }
 
-  const user = await prisma.user.findFirst({
-    where: dto.uniqueId ? { uniqueId: dto.uniqueId } : { email: dto.email },
-    include: { tenant: true, principal: true, admin: true, teacher: true, student: true, parent: true },
-  });
+  let user: any = null;
+
+  if (dto.uniqueId) {
+    // If role is explicitly provided, use it to disambiguate shared IDs
+    if (dto.role) {
+      user = await prisma.user.findFirst({
+        where: { uniqueId: dto.uniqueId, role: dto.role },
+        include: { tenant: true, principal: true, admin: true, teacher: true, student: true, parent: true },
+      });
+    } else {
+      // Shared ID: student/parent may have same uniqueId.
+      // Try password-based disambiguation — find all users with this uniqueId.
+      const candidates = await prisma.user.findMany({
+        where: { uniqueId: dto.uniqueId },
+        include: { tenant: true, principal: true, admin: true, teacher: true, student: true, parent: true },
+      });
+
+      if (candidates.length === 0) {
+        throw ApiError.unauthorized("Invalid credentials", "INVALID_CREDENTIALS");
+      }
+
+      // Try each candidate's password
+      let matched = false;
+      for (const candidate of candidates) {
+        const valid = await comparePassword(dto.password, candidate.passwordHash);
+        if (valid) {
+          user = candidate;
+          matched = true;
+          break;
+        }
+      }
+
+      if (!matched) {
+        // Increment login attempts for ALL candidates with shared uniqueId
+        // to prevent brute-forcing either account
+        for (const candidate of candidates) {
+          const updatedAttempts = candidate.loginAttempts + 1;
+          const lockUntil = updatedAttempts >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : null;
+          await prisma.user.update({
+            where: { id: candidate.id },
+            data: { loginAttempts: updatedAttempts, lockUntil },
+          });
+        }
+        throw ApiError.unauthorized("Invalid credentials", "INVALID_CREDENTIALS");
+      }
+    }
+  } else if (dto.email) {
+    user = await prisma.user.findFirst({
+      where: { email: dto.email },
+      include: { tenant: true, principal: true, admin: true, teacher: true, student: true, parent: true },
+    });
+  }
 
   if (!user) {
     throw ApiError.unauthorized("Invalid credentials", "INVALID_CREDENTIALS");
@@ -215,16 +266,19 @@ export async function loginUser(dto: LoginDTO) {
     throw ApiError.forbidden("Account is temporarily locked. Try again later.", "ACCOUNT_LOCKED");
   }
 
-  const valid = await comparePassword(dto.password, user.passwordHash);
-  if (!valid) {
-    // Increment login attempts
-    const updatedAttempts = user.loginAttempts + 1;
-    const lockUntil = updatedAttempts >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : null;
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { loginAttempts: updatedAttempts, lockUntil },
-    });
-    throw ApiError.unauthorized("Invalid credentials", "INVALID_CREDENTIALS");
+  // When role was provided (or email login), we still need to verify password
+  if (dto.role || dto.email) {
+    const valid = await comparePassword(dto.password, user.passwordHash);
+    if (!valid) {
+      // Increment login attempts
+      const updatedAttempts = user.loginAttempts + 1;
+      const lockUntil = updatedAttempts >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : null;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { loginAttempts: updatedAttempts, lockUntil },
+      });
+      throw ApiError.unauthorized("Invalid credentials", "INVALID_CREDENTIALS");
+    }
   }
 
   // Reset login attempts on success
@@ -259,8 +313,8 @@ export async function loginUser(dto: LoginDTO) {
   await prisma.loginHistory.create({
     data: {
       userId: user.id,
-      ipAddress: "0.0.0.0", // passed from controller
-      userAgent: "",        // passed from controller
+      ipAddress: dto.ipAddress || "0.0.0.0",
+      userAgent: dto.userAgent || "",
       status: "SUCCESS" as any,
     },
   });

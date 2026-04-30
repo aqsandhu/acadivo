@@ -6,6 +6,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { ApiError } from "../../utils/ApiError";
+import { uploadToCloudinary, uploadMultipleToCloudinary } from "../../utils/upload";
 
 const router = Router();
 
@@ -41,54 +42,70 @@ const upload = multer({
 });
 
 // ── Upload Single Image ──
-router.post("/image", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    throw ApiError.badRequest("No image file provided", "NO_FILE");
+router.post("/image", upload.single("file"), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw ApiError.badRequest("No image file provided", "NO_FILE");
+    }
+    const url = await uploadToCloudinary(req.file, "acadivo/images");
+    res.status(200).json({
+      success: true,
+      message: "Image uploaded successfully",
+      data: {
+        url,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+      },
+    });
+  } catch (err) {
+    next(err);
   }
-  res.status(200).json({
-    success: true,
-    message: "Image uploaded successfully",
-    data: {
-      originalName: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      bufferLength: req.file.buffer.length,
-    },
-  });
 });
 
 // ── Upload Single Document ──
-router.post("/document", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    throw ApiError.badRequest("No document file provided", "NO_FILE");
+router.post("/document", upload.single("file"), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw ApiError.badRequest("No document file provided", "NO_FILE");
+    }
+    const url = await uploadToCloudinary(req.file, "acadivo/documents");
+    res.status(200).json({
+      success: true,
+      message: "Document uploaded successfully",
+      data: {
+        url,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+      },
+    });
+  } catch (err) {
+    next(err);
   }
-  res.status(200).json({
-    success: true,
-    message: "Document uploaded successfully",
-    data: {
-      originalName: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      bufferLength: req.file.buffer.length,
-    },
-  });
 });
 
 // ── Upload Multiple Files ──
-router.post("/multiple", upload.array("files", 5), (req, res) => {
-  if (!req.files || (req.files as any[]).length === 0) {
-    throw ApiError.badRequest("No files provided", "NO_FILES");
+router.post("/multiple", upload.array("files", 5), async (req, res, next) => {
+  try {
+    if (!req.files || (req.files as any[]).length === 0) {
+      throw ApiError.badRequest("No files provided", "NO_FILES");
+    }
+    const files = req.files as Express.Multer.File[];
+    const urls = await uploadMultipleToCloudinary(files, "acadivo/general");
+    res.status(200).json({
+      success: true,
+      message: `${files.length} files uploaded successfully`,
+      data: files.map((f, i) => ({
+        url: urls[i],
+        originalName: f.originalname,
+        mimetype: f.mimetype,
+        size: f.size,
+      })),
+    });
+  } catch (err) {
+    next(err);
   }
-  const files = req.files as any[];
-  res.status(200).json({
-    success: true,
-    message: `${files.length} files uploaded successfully`,
-    data: files.map((f) => ({
-      originalName: f.originalname,
-      mimetype: f.mimetype,
-      size: f.size,
-    })),
-  });
 });
 
 export default router;

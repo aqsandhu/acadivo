@@ -14,7 +14,11 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
-  const result = await authService.loginUser(req.body);
+  const result = await authService.loginUser({
+    ...req.body,
+    ipAddress: req.ip || (req.headers["x-forwarded-for"] as string) || "0.0.0.0",
+    userAgent: req.headers["user-agent"] || "",
+  });
   if ("requires2FA" in result && result.requires2FA) {
     return res.status(200).json(successResponse(result, result.message));
   }

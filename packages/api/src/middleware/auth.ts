@@ -7,6 +7,7 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken, TokenPayload } from "../utils/jwt";
 import { ApiError } from "../utils/ApiError";
+import { prisma } from "../lib/prisma";
 
 declare global {
   namespace Express {
@@ -19,9 +20,9 @@ declare global {
 /**
  * Main authentication middleware.
  * Extracts Bearer token from Authorization header, verifies JWT,
- * and attaches decoded payload to req.user.
+ * checks user existence and active status, and attaches decoded payload to req.user.
  */
-export function authMiddleware(req: Request, _res: Response, next: NextFunction): void {
+export async function authMiddleware(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -32,6 +33,16 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
 
   try {
     const decoded = verifyToken(token, "access");
+
+    // Verify user still exists and is active in the database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, isActive: true },
+    });
+    if (!user || !user.isActive) {
+      return next(ApiError.unauthorized("User not found or inactive", "AUTH_USER_INVALID"));
+    }
+
     req.user = decoded as any;
     next();
   } catch (err) {

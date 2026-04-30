@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../../middleware/auth";
-import { validateRequest } from "../../middleware/validation";
+import { validateRequest } from "../../middleware/validateRequest";
 import * as controller from "./fee.controller";
 import * as validator from "./fee.validator";
 

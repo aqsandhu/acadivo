@@ -1,10 +1,9 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/prisma";
 import { createClient } from "redis";
 import os from "os";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // ── Simple uptime tracking ────────────────────────────────────────────────
 const START_TIME = Date.now();

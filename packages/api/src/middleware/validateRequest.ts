@@ -5,6 +5,7 @@
  */
 
 import { Request, Response, NextFunction, RequestHandler } from "express";
+import { validationResult, Result, ValidationError } from "express-validator";
 import { ZodSchema, ZodError } from "zod";
 import { ApiError } from "../utils/ApiError";
 
@@ -62,3 +63,21 @@ export function validateQuery<T>(schema: ZodSchema<T>): RequestHandler {
     next();
   };
 }
+
+/**
+ * Express-validator result checker.
+ * Use after express-validator rule arrays (body(), param(), query()).
+ */
+export const validateRequest: RequestHandler = (req: Request, _res: Response, next: NextFunction) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const formatted = errors.array().reduce((acc: Record<string, string[]>, err: ValidationError) => {
+      const key = "param" in err ? err.param : "msg" in err ? err.msg : "unknown";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(err.msg);
+      return acc;
+    }, {});
+    return next(new ApiError("Validation failed", 400, true, "VALIDATION_ERROR", formatted));
+  }
+  next();
+};
