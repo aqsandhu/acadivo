@@ -6,14 +6,14 @@ groups:
     rules:
       # 1. API High Error Rate
       - alert: APIHighErrorRate
-        expr: rate(socketio_connections_active{job="acadivo-api"}[5m]) > 0.1
+        expr: rate(http_requests_total{job="acadivo-api",status=~"5.."}[5m]) / rate(http_requests_total{job="acadivo-api"}[5m]) > 0.1
         for: 2m
         labels:
           severity: critical
           service: api
         annotations:
           summary: "API high error rate detected"
-          description: "API error rate is above 10% for more than 2 minutes"
+          description: "API 5xx error rate is above 10% for more than 2 minutes"
 
       # 2. API High Latency
       - alert: APIHighLatency
@@ -50,14 +50,14 @@ groups:
 
       # 5. Database Connection Failed
       - alert: DatabaseConnectionFailed
-        expr: up{job="acadivo-api"} == 0
+        expr: pg_up == 0
         for: 2m
         labels:
           severity: critical
           service: database
         annotations:
           summary: "Database connection failed"
-          description: "Cannot connect to PostgreSQL database"
+          description: "PostgreSQL exporter cannot connect to database"
 
       # 6. Redis Down
       - alert: RedisDown
