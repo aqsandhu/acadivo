@@ -14,7 +14,11 @@ export enum UserRole {
 export interface User {
   id: string;
   email: string;
-  name: string | null;
+  firstName: string;
+  lastName: string;
+  fullName?: string;
+  /** @deprecated Use firstName + lastName instead */
+  name?: string;
   role: UserRole;
   tenantId?: string;
   isActive: boolean;
@@ -33,3 +37,6 @@ export interface UserProfile extends User {
   dateOfBirth?: Date;
   gender?: "MALE" | "FEMALE" | "OTHER";
 }
+
+// Backward compatibility alias
+export type UserName = { name: string } & User;
